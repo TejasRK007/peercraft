@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../app_theme.dart';
 
@@ -10,11 +11,13 @@ const String _agoraAppId = 'c10d85c17d4343258f2d525283456b30';
 class VideoCallScreen extends StatefulWidget {
   final String channelName;
   final String peerName;
+  final bool isTeacher;
 
   const VideoCallScreen({
     super.key,
     required this.channelName,
     required this.peerName,
+    this.isTeacher = false,
   });
 
   @override
@@ -42,43 +45,51 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
 
     // Create engine
     _engine = createAgoraRtcEngine();
-    await _engine.initialize(RtcEngineContext(
-      appId: _agoraAppId,
-      channelProfile: ChannelProfileType.channelProfileCommunication,
-    ));
+    await _engine.initialize(
+      RtcEngineContext(
+        appId: _agoraAppId,
+        channelProfile: ChannelProfileType.channelProfileCommunication,
+      ),
+    );
 
     // Register event handlers
-    _engine.registerEventHandler(RtcEngineEventHandler(
-      onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
-        if (!mounted) return;
-        setState(() {
-          _localUserJoined = true;
-          _isInitializing = false;
-          _statusText = 'Waiting for ${widget.peerName}...';
-        });
-      },
-      onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
-        if (!mounted) return;
-        setState(() {
-          _remoteUid = remoteUid;
-          _statusText = 'Connected';
-        });
-      },
-      onUserOffline: (RtcConnection connection, int remoteUid,
-          UserOfflineReasonType reason) {
-        if (!mounted) return;
-        setState(() {
-          _remoteUid = null;
-          _statusText = '${widget.peerName} left the call';
-        });
-      },
-      onError: (ErrorCodeType code, String msg) {
-        if (!mounted) return;
-        setState(() {
-          _statusText = 'Error: $msg';
-        });
-      },
-    ));
+    _engine.registerEventHandler(
+      RtcEngineEventHandler(
+        onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
+          if (!mounted) return;
+          setState(() {
+            _localUserJoined = true;
+            _isInitializing = false;
+            _statusText = 'Waiting for ${widget.peerName}...';
+          });
+        },
+        onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
+          if (!mounted) return;
+          setState(() {
+            _remoteUid = remoteUid;
+            _statusText = 'Connected';
+          });
+        },
+        onUserOffline:
+            (
+              RtcConnection connection,
+              int remoteUid,
+              UserOfflineReasonType reason,
+            ) {
+              if (!mounted) return;
+              setState(() {
+                _remoteUid = null;
+                _statusText = '${widget.peerName} left the call';
+              });
+            },
+        onError: (ErrorCodeType code, String msg) {
+          if (!mounted) return;
+          setState(() {
+            _statusText = 'Error: $msg';
+          });
+        },
+      ),
+    );
 
     // Enable video
     await _engine.enableVideo();
@@ -120,8 +131,90 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     _engine.switchCamera();
   }
 
-  void _onEndCall() {
-    Navigator.of(context).pop();
+  Future<void> _onEndCall() async {
+    // End the call locally
+    try {
+      await _engine.leaveChannel();
+      await _engine.release();
+    } catch (_) {}
+
+    if (!mounted) return;
+
+    if (widget.isTeacher) {
+      final wantsToSend = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Session Ended',
+            style: AppTheme.headingSmall.copyWith(fontSize: 20),
+          ),
+          content: Text(
+            'Would you like to send PDF notes or materials to ${widget.peerName}?',
+            style: AppTheme.subtitleStyle,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(
+                'No, thanks',
+                style: AppTheme.labelStyle.copyWith(
+                  color: AppTheme.textMuted,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryPurple,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Attach PDF',
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (wantsToSend == true) {
+        final result = await FilePicker.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['pdf'],
+        );
+
+        if (result != null && result.files.isNotEmpty && mounted) {
+          final fileName = result.files.first.name;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Notes "$fileName" sent to ${widget.peerName}!',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              backgroundColor: const Color(0xFF4CAF50),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        }
+      }
+    }
+
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -138,8 +231,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                     controller: VideoViewController.remote(
                       rtcEngine: _engine,
                       canvas: VideoCanvas(uid: _remoteUid),
-                      connection:
-                          RtcConnection(channelId: widget.channelName),
+                      connection: RtcConnection(channelId: widget.channelName),
                     ),
                   )
                 : Center(
@@ -216,8 +308,10 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                   ),
                   const SizedBox(height: 4),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _remoteUid != null
                           ? Colors.green.withAlpha(40)
@@ -307,10 +401,7 @@ class _CallButton extends StatelessWidget {
           Container(
             width: 56,
             height: 56,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             child: Icon(icon, color: Colors.white, size: 26),
           ),
           const SizedBox(height: 8),

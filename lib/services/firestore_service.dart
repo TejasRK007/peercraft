@@ -14,20 +14,19 @@ class FirestoreService {
   /// Save or update the current user's profile to Firestore.
   static Future<void> saveUserProfile({
     required IntentMode intent,
-    required List<String> selectedSkills,
+    required List<String> skillsToLearn,
+    required List<String> skillsToTeach,
   }) async {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    // Save skills to both fields — this is a peer-to-peer platform
-    // where users can both learn and teach any skill they know.
     final displayName = user.displayName ?? user.email?.split('@').first ?? 'User';
 
     await _usersRef.doc(user.uid).set({
       'name': displayName,
       'email': user.email ?? '',
-      'skillsToTeach': selectedSkills,
-      'skillsToLearn': selectedSkills,
+      'skillsToTeach': skillsToTeach,
+      'skillsToLearn': skillsToLearn,
       'intent': intent.name,
       'rating': 4.5,
       'skillLevel': 'Intermediate',

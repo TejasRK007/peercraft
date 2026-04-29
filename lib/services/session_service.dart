@@ -12,6 +12,7 @@ class SessionRequest {
   final String sessionType;
   final String status; // pending, accepted, rejected
   final String channelName;
+  final String teacherUid;
   final DateTime? createdAt;
 
   const SessionRequest({
@@ -25,6 +26,7 @@ class SessionRequest {
     required this.sessionType,
     required this.status,
     required this.channelName,
+    required this.teacherUid,
     this.createdAt,
   });
 
@@ -47,6 +49,7 @@ class SessionRequest {
       sessionType: (data['sessionType'] as String?) ?? '1:1',
       status: (data['status'] as String?) ?? 'pending',
       channelName: (data['channelName'] as String?) ?? '',
+      teacherUid: (data['teacherUid'] as String?) ?? '',
       createdAt: created,
     );
   }
@@ -74,6 +77,7 @@ class SessionService {
     required String skill,
     required String slot,
     required String sessionType,
+    required String teacherUid,
   }) async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -96,6 +100,7 @@ class SessionService {
       'sessionType': sessionType,
       'status': 'pending',
       'channelName': channelName,
+      'teacherUid': teacherUid,
       'createdAt': FieldValue.serverTimestamp(),
     });
   }

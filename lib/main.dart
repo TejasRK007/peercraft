@@ -73,8 +73,8 @@ class AuthGate extends StatelessWidget {
         }
 
         // User is logged in, check if they have completed skill setup
-        return FutureBuilder<({IntentMode intent, List<String> skills})?>(
-          future: OnboardingPreferencesService().load(),
+        return FutureBuilder<({IntentMode intent, List<String> skillsToLearn, List<String> skillsToTeach})?> (
+          future: OnboardingPreferencesService().loadSkills(),
           builder: (context, prefSnapshot) {
             if (prefSnapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(
@@ -87,14 +87,17 @@ class AuthGate extends StatelessWidget {
 
             final data = prefSnapshot.data;
             // If local data isn't found, send them to setup their skills
-            if (data == null || data.skills.isEmpty) {
-              return const SkillSelectionScreen(intent: IntentMode.learn);
+            if (data == null || (data.skillsToLearn.isEmpty && data.skillsToTeach.isEmpty)) {
+              return const SkillSelectionScreen(intent: IntentMode.both);
             }
 
+            final allSkills = {...data.skillsToLearn, ...data.skillsToTeach}.toList();
             // Fully setup, go to home screen
             return HomeScreen(
               intent: data.intent,
-              selectedSkills: data.skills,
+              selectedSkills: allSkills,
+              skillsToLearn: data.skillsToLearn,
+              skillsToTeach: data.skillsToTeach,
             );
           },
         );

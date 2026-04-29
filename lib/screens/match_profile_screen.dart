@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../app_theme.dart';
 import '../models/mock_matching.dart';
 import '../services/session_service.dart';
@@ -306,6 +308,9 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
                         skill: match.matchSkill,
                         slot: slot,
                         sessionType: sType,
+                        teacherUid: match.section == MatchSection.learnFromThem
+                            ? match.user.uid
+                            : FirebaseAuth.instance.currentUser!.uid,
                       );
                       messenger.showSnackBar(
                         SnackBar(

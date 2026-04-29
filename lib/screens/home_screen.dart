@@ -16,12 +16,16 @@ import 'video_call_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<String> selectedSkills;
+  final List<String> skillsToLearn;
+  final List<String> skillsToTeach;
   final IntentMode intent;
 
   const HomeScreen({
     super.key,
     required this.selectedSkills,
     required this.intent,
+    this.skillsToLearn = const [],
+    this.skillsToTeach = const [],
   });
 
   @override
@@ -168,19 +172,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         _loadMatches();
                       },
                       selectedSkills: widget.selectedSkills,
+                      skillsToLearn: widget.skillsToLearn,
+                      allMatches: _matches,
                       searchController: _searchController,
                       learnFromThem: learnFromThem,
                       teachThem: teachThem,
                       onReload: _loadMatches,
                       onOpenMatchProfile: _openMatchProfile,
                       onQuickAction: (action) {
-                        if (action == 'Find Match') {
-                          _loadMatches();
-                          return;
-                        }
                         if (action == 'Start Session') {
                           if (_matches.isEmpty) {
-                            _showSnack('No matches yet. Tap Find Match.');
+                            _showSnack('No matches yet. Use Find Match.');
                             return;
                           }
                           _openMatchProfile(_matches.first);
@@ -308,6 +310,8 @@ class _HomeTab extends StatelessWidget {
   final IntentMode intent;
   final ValueChanged<IntentMode> onIntentChanged;
   final List<String> selectedSkills;
+  final List<String> skillsToLearn;
+  final List<MockMatch> allMatches;
   final TextEditingController searchController;
   final List<MockMatch> learnFromThem;
   final List<MockMatch> teachThem;
@@ -319,6 +323,8 @@ class _HomeTab extends StatelessWidget {
     required this.intent,
     required this.onIntentChanged,
     required this.selectedSkills,
+    required this.skillsToLearn,
+    required this.allMatches,
     required this.searchController,
     required this.learnFromThem,
     required this.teachThem,
@@ -401,7 +407,12 @@ class _HomeTab extends StatelessWidget {
               style: AppTheme.headingSmall.copyWith(fontSize: 18),
             ),
             const SizedBox(height: 10),
-            _QuickActions(onAction: onQuickAction),
+            _QuickActions(
+              onAction: onQuickAction,
+              skillsToLearn: skillsToLearn,
+              allMatches: allMatches,
+              onOpenMatchProfile: onOpenMatchProfile,
+            ),
 
             const SizedBox(height: 22),
             const SizedBox(height: 30),
@@ -731,7 +742,29 @@ class _MatchCard extends StatelessWidget {
 
 class _QuickActions extends StatelessWidget {
   final ValueChanged<String> onAction;
-  const _QuickActions({required this.onAction});
+  final List<String> skillsToLearn;
+  final List<MockMatch> allMatches;
+  final ValueChanged<MockMatch> onOpenMatchProfile;
+
+  const _QuickActions({
+    required this.onAction,
+    required this.skillsToLearn,
+    required this.allMatches,
+    required this.onOpenMatchProfile,
+  });
+
+  void _showFindMatchSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _FindMatchSheet(
+        skillsToLearn: skillsToLearn,
+        allMatches: allMatches,
+        onOpenMatchProfile: onOpenMatchProfile,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -743,7 +776,7 @@ class _QuickActions extends StatelessWidget {
               child: _ActionButton(
                 label: 'Find Match',
                 icon: Icons.search_rounded,
-                onTap: () => onAction('Find Match'),
+                onTap: () => _showFindMatchSheet(context),
               ),
             ),
             const SizedBox(width: 12),
@@ -763,6 +796,391 @@ class _QuickActions extends StatelessWidget {
           onTap: () => onAction('Teach Now'),
         ),
       ],
+    );
+  }
+}
+
+// ── Find Match Bottom Sheet ───────────────────────────────────────────────────
+class _FindMatchSheet extends StatefulWidget {
+  final List<String> skillsToLearn;
+  final List<MockMatch> allMatches;
+  final ValueChanged<MockMatch> onOpenMatchProfile;
+
+  const _FindMatchSheet({
+    required this.skillsToLearn,
+    required this.allMatches,
+    required this.onOpenMatchProfile,
+  });
+
+  @override
+  State<_FindMatchSheet> createState() => _FindMatchSheetState();
+}
+
+class _FindMatchSheetState extends State<_FindMatchSheet> {
+  String? _selectedSkill;
+
+  List<MockMatch> get _filteredMentors {
+    if (_selectedSkill == null) return [];
+    final skill = _selectedSkill!.toLowerCase();
+    return widget.allMatches.where((m) {
+      return m.user.skillsToTeach.any((s) => s.toLowerCase() == skill);
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mentors = _filteredMentors;
+    final learnSkills = widget.skillsToLearn.isEmpty
+        ? const ['Add skills to learn first']
+        : widget.skillsToLearn;
+    final hasRealSkills = widget.skillsToLearn.isNotEmpty;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.72,
+      minChildSize: 0.45,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (_, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 14, bottom: 6),
+                  width: 48,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryPurple.withAlpha(50),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 40, height: 40,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryPurple.withAlpha(20),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(Icons.search_rounded,
+                              color: AppTheme.primaryPurple, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Find a Mentor',
+                                style: AppTheme.headingSmall.copyWith(fontSize: 20)),
+                            Text('Which skill do you want to learn today?',
+                                style: AppTheme.subtitleStyle.copyWith(fontSize: 12.5)),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Skill chips
+                    Text('Your learning skills',
+                        style: AppTheme.labelStyle.copyWith(
+                            color: AppTheme.textMuted, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: learnSkills.map((skill) {
+                        final isSelected = _selectedSkill == skill;
+                        return GestureDetector(
+                          onTap: hasRealSkills
+                              ? () => setState(() {
+                                    _selectedSkill = isSelected ? null : skill;
+                                  })
+                              : null,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 9),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppTheme.primaryPurple
+                                  : AppTheme.primaryPurple.withAlpha(12),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppTheme.primaryPurple
+                                    : AppTheme.primaryPurple.withAlpha(55),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isSelected) ...[
+                                  const Icon(Icons.check_rounded,
+                                      color: Colors.white, size: 14),
+                                  const SizedBox(width: 5),
+                                ],
+                                Text(
+                                  skill,
+                                  style: TextStyle(
+                                    fontFamily: 'Outfit',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13.5,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : AppTheme.primaryPurple,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Mentor list header
+                    if (_selectedSkill != null) ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Mentors for \'$_selectedSkill\'',
+                              style: AppTheme.headingSmall.copyWith(fontSize: 16),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryPurple.withAlpha(14),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              '${mentors.length} found',
+                              style: AppTheme.labelStyle.copyWith(
+                                  color: AppTheme.primaryPurple,
+                                  fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                  ],
+                ),
+              ),
+
+              // Mentor list
+              Expanded(
+                child: _selectedSkill == null
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.touch_app_rounded,
+                                size: 48,
+                                color: AppTheme.primaryPurple.withAlpha(80)),
+                            const SizedBox(height: 12),
+                            Text('Tap a skill above to\nsee available mentors',
+                                textAlign: TextAlign.center,
+                                style: AppTheme.subtitleStyle),
+                          ],
+                        ),
+                      )
+                    : mentors.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.person_search_rounded,
+                                    size: 48,
+                                    color: AppTheme.primaryPurple.withAlpha(60)),
+                                const SizedBox(height: 12),
+                                Text(
+                                    'No mentors found for\n\'$_selectedSkill\' yet.',
+                                    textAlign: TextAlign.center,
+                                    style: AppTheme.subtitleStyle),
+                                const SizedBox(height: 8),
+                                Text('Check back later!',
+                                    style: AppTheme.labelStyle.copyWith(
+                                        color: AppTheme.textMuted)),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                            controller: scrollController,
+                            padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
+                            itemCount: mentors.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (context, i) {
+                              final m = mentors[i];
+                              return _MentorListTile(
+                                match: m,
+                                targetSkill: _selectedSkill!,
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                  widget.onOpenMatchProfile(m);
+                                },
+                              );
+                            },
+                          ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Mentor List Tile (inside Find Match sheet) ────────────────────────────────
+class _MentorListTile extends StatelessWidget {
+  final MockMatch match;
+  final String targetSkill;
+  final VoidCallback onTap;
+
+  const _MentorListTile({
+    required this.match,
+    required this.targetSkill,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final u = match.user;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.black.withAlpha(12), width: 1),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withAlpha(8),
+                blurRadius: 14,
+                offset: const Offset(0, 5)),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Avatar
+            CircleAvatar(
+              radius: 26,
+              backgroundColor: u.avatarColor.withAlpha(220),
+              child: Text(
+                initialsForName(u.name),
+                style: const TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(u.name,
+                      style: AppTheme.headingSmall.copyWith(fontSize: 15),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded,
+                          color: Color(0xFFFFC857), size: 13),
+                      const SizedBox(width: 3),
+                      Text(u.rating.toStringAsFixed(1),
+                          style: AppTheme.labelStyle.copyWith(
+                              fontSize: 12,
+                              color: AppTheme.textMuted,
+                              fontWeight: FontWeight.w700)),
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 4,
+                        height: 4,
+                        decoration: const BoxDecoration(
+                            color: AppTheme.textMuted,
+                            shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 8),
+                      Text('${u.sessionsCompleted} sessions',
+                          style: AppTheme.labelStyle.copyWith(
+                              fontSize: 12, color: AppTheme.textMuted)),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  // Skill match badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryPurple.withAlpha(18),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      'Teaches: $targetSkill',
+                      style: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11.5,
+                        color: AppTheme.primaryPurple,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Match score + arrow
+            Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 9, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: u.avatarColor.withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${match.matchScore}%',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13,
+                      color: u.avatarColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Icon(Icons.arrow_forward_ios_rounded,
+                    size: 14, color: AppTheme.textMuted),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

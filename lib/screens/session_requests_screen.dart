@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../app_theme.dart';
 import '../services/session_service.dart';
 import 'video_call_screen.dart';
@@ -463,6 +465,8 @@ class _RequestCard extends StatelessWidget {
                       builder: (_) => VideoCallScreen(
                         channelName: request.channelName,
                         peerName: _peerName,
+                        isTeacher: FirebaseAuth.instance.currentUser?.uid ==
+                            request.teacherUid,
                       ),
                     ),
                   );
