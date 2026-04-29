@@ -14,6 +14,9 @@ class MockUser {
   final double rating;
   final Color avatarColor;
   final bool isTopMentor;
+  final String skillLevel;
+  final int experienceYears;
+  final int sessionsCompleted;
 
   const MockUser({
     required this.name,
@@ -22,6 +25,9 @@ class MockUser {
     required this.rating,
     required this.avatarColor,
     required this.isTopMentor,
+    required this.skillLevel,
+    required this.experienceYears,
+    required this.sessionsCompleted,
   });
 }
 
@@ -51,6 +57,9 @@ const List<MockUser> mockUsers = [
     rating: 4.8,
     avatarColor: Color(0xFF7C5CFC),
     isTopMentor: true,
+    skillLevel: 'Advanced',
+    experienceYears: 4,
+    sessionsCompleted: 45,
   ),
   MockUser(
     name: 'Aanya Verma',
@@ -59,6 +68,9 @@ const List<MockUser> mockUsers = [
     rating: 4.7,
     avatarColor: Color(0xFF4A2FA3),
     isTopMentor: true,
+    skillLevel: 'Intermediate',
+    experienceYears: 2,
+    sessionsCompleted: 12,
   ),
   MockUser(
     name: 'Rohan Mehta',
@@ -67,6 +79,9 @@ const List<MockUser> mockUsers = [
     rating: 4.6,
     avatarColor: Color(0xFFFF7B54),
     isTopMentor: false,
+    skillLevel: 'Advanced',
+    experienceYears: 3,
+    sessionsCompleted: 28,
   ),
   MockUser(
     name: 'Maya Iyer',
@@ -75,6 +90,9 @@ const List<MockUser> mockUsers = [
     rating: 4.9,
     avatarColor: Color(0xFFFFB347),
     isTopMentor: true,
+    skillLevel: 'Advanced',
+    experienceYears: 5,
+    sessionsCompleted: 60,
   ),
   MockUser(
     name: 'Dev Patel',
@@ -83,6 +101,9 @@ const List<MockUser> mockUsers = [
     rating: 4.5,
     avatarColor: Color(0xFFB39DDB),
     isTopMentor: false,
+    skillLevel: 'Intermediate',
+    experienceYears: 2,
+    sessionsCompleted: 8,
   ),
   MockUser(
     name: 'Zara Khan',
@@ -91,6 +112,9 @@ const List<MockUser> mockUsers = [
     rating: 4.8,
     avatarColor: Color(0xFF2D1B69),
     isTopMentor: true,
+    skillLevel: 'Advanced',
+    experienceYears: 6,
+    sessionsCompleted: 85,
   ),
   MockUser(
     name: 'Ethan Joseph',
@@ -99,6 +123,9 @@ const List<MockUser> mockUsers = [
     rating: 4.6,
     avatarColor: Color(0xFF7E57C2),
     isTopMentor: false,
+    skillLevel: 'Intermediate',
+    experienceYears: 3,
+    sessionsCompleted: 19,
   ),
   MockUser(
     name: 'Sophia Lin',
@@ -107,6 +134,9 @@ const List<MockUser> mockUsers = [
     rating: 4.4,
     avatarColor: Color(0xFFFF7F7F),
     isTopMentor: false,
+    skillLevel: 'Beginner',
+    experienceYears: 1,
+    sessionsCompleted: 3,
   ),
 ];
 

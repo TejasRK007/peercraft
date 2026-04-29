@@ -82,6 +82,37 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
                         const SizedBox(height: 22),
 
                         Text(
+                          'Expertise & Experience',
+                          style: AppTheme.headingSmall.copyWith(fontSize: 18),
+                        ),
+                        const SizedBox(height: 10),
+                        _SkillLevelBreakdown(skillLevel: match.user.skillLevel),
+                        const SizedBox(height: 12),
+                        _ExperienceGraph(
+                          experienceYears: match.user.experienceYears,
+                          avatarColor: match.user.avatarColor,
+                        ),
+                        const SizedBox(height: 22),
+
+                        Text(
+                          'Platform Stats',
+                          style: AppTheme.headingSmall.copyWith(fontSize: 18),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _SessionHistory(sessionsCompleted: match.user.sessionsCompleted),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _RatingBreakdown(rating: match.user.rating),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 22),
+
+                        Text(
                           'Session Info',
                           style: AppTheme.headingSmall.copyWith(fontSize: 18),
                         ),
@@ -727,3 +758,187 @@ class _BottomActions extends StatelessWidget {
   }
 }
 
+class _SkillLevelBreakdown extends StatelessWidget {
+  final String skillLevel;
+  const _SkillLevelBreakdown({required this.skillLevel});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(230),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.black.withAlpha(10), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryPurple.withAlpha(20),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.leaderboard_rounded, color: AppTheme.primaryPurple, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Skill Level',
+                  style: AppTheme.labelStyle.copyWith(
+                    color: AppTheme.textMuted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  skillLevel,
+                  style: AppTheme.headingSmall.copyWith(fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExperienceGraph extends StatelessWidget {
+  final int experienceYears;
+  final Color avatarColor;
+  
+  const _ExperienceGraph({required this.experienceYears, required this.avatarColor});
+
+  @override
+  Widget build(BuildContext context) {
+    final int maxYears = 10;
+    final int displayBars = 10;
+    final int activeBars = ((experienceYears / maxYears) * displayBars).clamp(1, displayBars).round();
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(230),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.black.withAlpha(10), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Experience',
+                style: AppTheme.labelStyle.copyWith(
+                  color: AppTheme.textMuted,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                '$experienceYears+ Years',
+                style: AppTheme.labelStyle.copyWith(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(displayBars, (index) {
+              final isActive = index < activeBars;
+              return Container(
+                width: 20,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: isActive ? avatarColor : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SessionHistory extends StatelessWidget {
+  final int sessionsCompleted;
+  const _SessionHistory({required this.sessionsCompleted});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(230),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.black.withAlpha(10), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.history_edu_rounded, color: AppTheme.primaryPurple, size: 26),
+          const SizedBox(height: 10),
+          Text(
+            '$sessionsCompleted',
+            style: AppTheme.headingSmall.copyWith(fontSize: 22),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Sessions Done',
+            style: AppTheme.labelStyle.copyWith(
+              color: AppTheme.textMuted,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RatingBreakdown extends StatelessWidget {
+  final double rating;
+  const _RatingBreakdown({required this.rating});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(230),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.black.withAlpha(10), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.star_rounded, color: Color(0xFFFFC857), size: 26),
+          const SizedBox(height: 10),
+          Text(
+            rating.toStringAsFixed(1),
+            style: AppTheme.headingSmall.copyWith(fontSize: 22),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Average Rating',
+            style: AppTheme.labelStyle.copyWith(
+              color: AppTheme.textMuted,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

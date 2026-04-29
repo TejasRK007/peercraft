@@ -25,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _tabIndex = 0;
   final _searchController = TextEditingController();
 
+  late IntentMode _currentIntent;
   bool _isLoading = true;
   String _loadingStage = 'Analyzing your skills...';
   String _query = '';
@@ -34,6 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _currentIntent = widget.intent;
     _searchController.addListener(() {
       setState(() => _query = _searchController.text.trim().toLowerCase());
     });
@@ -52,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     await Future.delayed(const Duration(milliseconds: 850));
 
-    final computed = getMatches(widget.intent, widget.selectedSkills);
+    final computed = getMatches(_currentIntent, widget.selectedSkills);
     if (!mounted) return;
     setState(() {
       _matches = computed;
@@ -139,7 +141,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   index: _tabIndex,
                   children: [
                     _HomeTab(
-                      intent: widget.intent,
+                      intent: _currentIntent,
+                      onIntentChanged: (newIntent) {
+                        setState(() => _currentIntent = newIntent);
+                        _loadMatches();
+                      },
                       selectedSkills: widget.selectedSkills,
                       searchController: _searchController,
                       learnFromThem: learnFromThem,
@@ -174,6 +180,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     _SessionsTab(onAction: _showSnack),
                     _ProfileTab(
+                      intent: _currentIntent,
+                      onIntentChanged: (newIntent) {
+                        setState(() => _currentIntent = newIntent);
+                        _loadMatches();
+                      },
                       selectedSkills: widget.selectedSkills,
                       credits: 100,
                       onAction: _showSnack,
@@ -274,6 +285,7 @@ class _LoadingOverlay extends StatelessWidget {
 
 class _HomeTab extends StatelessWidget {
   final IntentMode intent;
+  final ValueChanged<IntentMode> onIntentChanged;
   final List<String> selectedSkills;
   final TextEditingController searchController;
   final List<MockMatch> learnFromThem;
@@ -284,6 +296,7 @@ class _HomeTab extends StatelessWidget {
 
   const _HomeTab({
     required this.intent,
+    required this.onIntentChanged,
     required this.selectedSkills,
     required this.searchController,
     required this.learnFromThem,
@@ -295,12 +308,11 @@ class _HomeTab extends StatelessWidget {
 
   (String label, String subtitle, List<MockMatch> matches) _sectionData() {
     if (intent == IntentMode.learn) {
-      return ('Can Teach You', 'People who can teach you', learnFromThem);
+      return ('Find mentors to learn from', 'People who can teach you', learnFromThem);
     }
     if (intent == IntentMode.teach) {
-      return ('Wants to Learn', 'People who want to learn from you', teachThem);
+      return ('Students looking to learn from you', 'People who want to learn from you', teachThem);
     }
-    // For both intents we display a combined recommended list.
     return ('Recommended Matches', 'Learn from them and teach them', [
       ...learnFromThem,
       ...teachThem,
@@ -319,7 +331,7 @@ class _HomeTab extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _Greeting(intent: intent),
+            _Greeting(intent: intent, onIntentChanged: onIntentChanged),
             const SizedBox(height: 14),
             _SearchBar(controller: searchController),
             const SizedBox(height: 18),
@@ -441,7 +453,7 @@ class _MatchesSection extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         SizedBox(
-          height: 210,
+          height: 340,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: matches.length,
@@ -471,29 +483,36 @@ class _MatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Generate experience progress bar visually (like ███████░░)
+    final double maxExp = 10.0;
+    final double expPercent = (match.user.experienceYears / maxExp).clamp(0.0, 1.0);
+    
     return GestureDetector(
       onTap: () => onOpenMatchProfile(match),
       child: Container(
-        width: 260,
-        padding: const EdgeInsets.all(14),
+        width: 300,
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white.withAlpha(230),
-          borderRadius: BorderRadius.circular(26),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.black.withAlpha(15), width: 1),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withAlpha(10),
-              blurRadius: 18,
-              offset: const Offset(0, 14),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Top Row: Avatar, Name, Rating
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 CircleAvatar(
-                  radius: 22,
+                  radius: 24,
                   backgroundColor: match.user.avatarColor.withAlpha(220),
                   child: Text(
                     initialsForName(match.user.name),
@@ -501,105 +520,183 @@ class _MatchCard extends StatelessWidget {
                       fontFamily: 'Outfit',
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
-                      fontSize: 13.5,
+                      fontSize: 15,
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         match.user.name,
-                        style: AppTheme.headingSmall.copyWith(fontSize: 16),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        match.matchSkill,
-                        style: AppTheme.labelStyle.copyWith(
-                          fontSize: 12.5,
-                          color: AppTheme.textMuted,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: AppTheme.headingSmall.copyWith(fontSize: 17),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.star_rounded, color: Color(0xFFFFC857), size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            match.user.rating.toStringAsFixed(1),
+                            style: AppTheme.labelStyle.copyWith(
+                              fontSize: 13,
+                              color: AppTheme.textMuted,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
+                // Match Score
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: match.user.avatarColor.withAlpha(20),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${match.matchScore}% Match',
+                    style: AppTheme.labelStyle.copyWith(
+                      color: match.user.avatarColor,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
               ],
             ),
-
-            const SizedBox(height: 12),
-
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              decoration: BoxDecoration(
-                color: match.user.avatarColor.withAlpha(20),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: match.user.avatarColor.withAlpha(60),
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                match.tag,
-                style: AppTheme.labelStyle.copyWith(
-                  color: match.user.avatarColor,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 12.5,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
+            const SizedBox(height: 16),
+            
+            // Skill Info
             Text(
-              match.matchReason,
-              style: AppTheme.subtitleStyle.copyWith(
+              match.tag == 'Can Teach You' 
+                  ? 'Teaches: ${match.user.skillsToTeach.join(', ')}'
+                  : 'Wants to learn: ${match.user.skillsToLearn.join(', ')}',
+              style: AppTheme.labelStyle.copyWith(
+                fontSize: 13.5,
+                color: Colors.black87,
                 fontWeight: FontWeight.w700,
-                color: AppTheme.textMuted,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-
-            const Spacer(),
-
+            const SizedBox(height: 12),
+            
+            // Level & Experience
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _AnimatedMatchPercent(
-                  target: match.matchScore,
-                  color: match.user.avatarColor,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blueGrey.withAlpha(20),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    match.user.skillLevel,
+                    style: AppTheme.labelStyle.copyWith(
+                      color: Colors.blueGrey.shade700,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11,
+                    ),
+                  ),
                 ),
-                SizedBox(
-                  width: 100,
-                  height: 38,
+              ],
+            ),
+            const SizedBox(height: 12),
+            
+            Text(
+              'Skill Strength',
+              style: AppTheme.labelStyle.copyWith(
+                fontSize: 12,
+                color: AppTheme.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: expPercent,
+                minHeight: 6,
+                backgroundColor: Colors.grey.shade200,
+                valueColor: AlwaysStoppedAnimation<Color>(match.user.avatarColor),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Extra Info
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.work_outline_rounded, size: 14, color: AppTheme.textMuted),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${match.user.experienceYears} yrs exp',
+                      style: AppTheme.labelStyle.copyWith(fontSize: 12, color: AppTheme.textMuted),
+                    ),
+                  ],
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle_outline_rounded, size: 14, color: AppTheme.textMuted),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${match.user.sessionsCompleted} sessions',
+                      style: AppTheme.labelStyle.copyWith(fontSize: 12, color: AppTheme.textMuted),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            
+            const Spacer(),
+            
+            // Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => onOpenMatchProfile(match),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: match.user.avatarColor,
+                      side: BorderSide(color: match.user.avatarColor.withAlpha(100), width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text(
+                      'View Profile',
+                      style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
                   child: ElevatedButton(
                     onPressed: () => onOpenMatchProfile(match),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryPurple,
+                      backgroundColor: match.user.avatarColor,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                    child: const FittedBox(
-                      child: Text(
-                        'Connect',
-                        style: TextStyle(
-                          fontFamily: 'Outfit',
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13.5,
-                        ),
-                      ),
+                    child: const Text(
+                      'Connect',
+                      style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 13),
                     ),
                   ),
-                )
+                ),
               ],
             ),
           ],
@@ -609,44 +706,7 @@ class _MatchCard extends StatelessWidget {
   }
 }
 
-class _AnimatedMatchPercent extends StatelessWidget {
-  final int target;
-  final Color color;
-  const _AnimatedMatchPercent({
-    required this.target,
-    required this.color,
-  });
 
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 45, end: target.toDouble()),
-      duration: const Duration(milliseconds: 700),
-      curve: Curves.elasticOut,
-      builder: (context, value, _) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: color.withAlpha(20),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: color.withAlpha(60),
-              width: 1,
-            ),
-          ),
-          child: Text(
-            '${value.round()}%',
-            style: AppTheme.labelStyle.copyWith(
-              color: color,
-              fontWeight: FontWeight.w900,
-              fontSize: 13,
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
 
 class _QuickActions extends StatelessWidget {
   final ValueChanged<String> onAction;
@@ -735,7 +795,8 @@ class _ActionButton extends StatelessWidget {
 
 class _Greeting extends StatelessWidget {
   final IntentMode intent;
-  const _Greeting({required this.intent});
+  final ValueChanged<IntentMode> onIntentChanged;
+  const _Greeting({required this.intent, required this.onIntentChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -822,114 +883,7 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-class _AiSuggestionCards extends StatelessWidget {
-  final ValueChanged<String> onAction;
-  const _AiSuggestionCards({required this.onAction});
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _AiCard(
-          title: 'You can learn Flutter from 6 peers',
-          subtitle: 'Fast paths based on your interests.',
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF7C5CFC), Color(0xFF4A2FA3)],
-          ),
-          icon: Icons.auto_awesome_rounded,
-          onTap: () => onAction('Open Flutter suggestions'),
-        ),
-        const SizedBox(height: 12),
-        _AiCard(
-          title: 'Your Python skill is trending',
-          subtitle: 'Peers are asking for it this week.',
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFF7B54), Color(0xFFFF9A7B)],
-          ),
-          icon: Icons.trending_up_rounded,
-          onTap: () => onAction('View trending Python'),
-        ),
-      ],
-    );
-  }
-}
-
-class _AiCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final LinearGradient gradient;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _AiCard({
-    required this.title,
-    required this.subtitle,
-    required this.gradient,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: [
-            BoxShadow(
-              color: gradient.colors.first.withAlpha(40),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(25),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Icon(icon, color: Colors.white, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: AppTheme.buttonTextStyle.copyWith(fontSize: 15),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _CreditsSection extends StatelessWidget {
   final int credits;
@@ -1186,11 +1140,15 @@ class _SessionsTab extends StatelessWidget {
 }
 
 class _ProfileTab extends StatelessWidget {
+  final IntentMode intent;
+  final ValueChanged<IntentMode> onIntentChanged;
   final List<String> selectedSkills;
   final int credits;
   final ValueChanged<String> onAction;
 
   const _ProfileTab({
+    required this.intent,
+    required this.onIntentChanged,
     required this.selectedSkills,
     required this.credits,
     required this.onAction,
@@ -1247,7 +1205,67 @@ class _ProfileTab extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 22),
+          Text(
+            'Active Role',
+            style: AppTheme.headingSmall.copyWith(fontSize: 18),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(230),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => onIntentChanged(IntentMode.learn),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: intent == IntentMode.learn ? AppTheme.primaryPurple : Colors.transparent,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Learner',
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            color: intent == IntentMode.learn ? Colors.white : AppTheme.textMuted,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => onIntentChanged(IntentMode.teach),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: intent == IntentMode.teach ? AppTheme.primaryPurple : Colors.transparent,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Teacher',
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            color: intent == IntentMode.teach ? Colors.white : AppTheme.textMuted,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
           Text(
             'Skills Snapshot',
             style: AppTheme.headingSmall.copyWith(fontSize: 18),

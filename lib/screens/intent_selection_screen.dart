@@ -135,13 +135,15 @@ class _IntentSelectionScreenState extends State<IntentSelectionScreen>
     // Persist intent selection locally (skills will be saved next screen).
     await _prefs.save(intent: _resolvedIntent, selectedSkills: const []);
 
+    if (!mounted) return;
+
     // Small loading indicator between screens (demo-friendly).
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
         Future<void>.delayed(const Duration(milliseconds: 420), () {
-          if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
+          if (ctx.mounted) Navigator.of(ctx).pop();
         });
         return const _SmallLoadingDialog(message: 'Preparing your matches...');
       },
