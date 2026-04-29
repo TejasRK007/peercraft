@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app_theme.dart';
-import 'skill_selection_screen.dart';
-import '../models/intent_mode.dart';
+import 'login_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -84,7 +83,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     Navigator.of(context).push(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 500),
-        pageBuilder: (_, animation, __) => const SkillSelectionScreen(intent: IntentMode.learn),
+        pageBuilder: (_, animation, __) => const LoginScreen(),
         transitionsBuilder: (_, animation, __, child) {
           return FadeTransition(
             opacity: animation,

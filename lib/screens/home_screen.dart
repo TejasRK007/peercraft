@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/onboarding_preferences_service.dart';
 
 import '../app_theme.dart';
 import '../models/intent_mode.dart';
@@ -1313,6 +1315,38 @@ class _ProfileTab extends StatelessWidget {
               ),
               child: const Text(
                 'Edit profile',
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14.5,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 48,
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () async {
+                // Clear local data and sign out of Firebase
+                await OnboardingPreferencesService().clear();
+                await FirebaseAuth.instance.signOut();
+                // The StreamBuilder in main.dart will automatically catch this and redirect to OnboardingScreen!
+              },
+              style: OutlinedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFF0F0),
+                foregroundColor: Colors.redAccent,
+                side: BorderSide(
+                  color: Colors.redAccent.withAlpha(80),
+                  width: 1.3,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              child: const Text(
+                'Log Out',
                 style: TextStyle(
                   fontFamily: 'Outfit',
                   fontWeight: FontWeight.w900,

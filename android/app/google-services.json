@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "430568394779",
+    "project_id": "peercraft-c9a63",
+    "storage_bucket": "peercraft-c9a63.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:430568394779:android:de2fce50f46ae2aac168be",
+        "android_client_info": {
+          "package_name": "com.example.peercraft"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyChoSE6hD4VmY0XsggDmI3RlCJHcyFFY9U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
