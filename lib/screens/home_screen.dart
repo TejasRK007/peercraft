@@ -220,7 +220,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         _loadMatches();
                       },
                       selectedSkills: widget.selectedSkills,
-                      credits: 100,
                       onAction: _showSnack,
                     ),
                   ],
@@ -393,7 +392,7 @@ class _HomeTab extends StatelessWidget {
                 style: AppTheme.headingSmall.copyWith(fontSize: 18),
               ),
               const SizedBox(height: 10),
-              _buildSkillChips(skillsToTeach),
+              _SkillLevelChips(skills: skillsToTeach, isTeachSkills: true),
             ] else ...[
               Text(
                 'Skills to Learn',
@@ -407,7 +406,7 @@ class _HomeTab extends StatelessWidget {
                 style: AppTheme.headingSmall.copyWith(fontSize: 18),
               ),
               const SizedBox(height: 10),
-              _buildSkillChips(skillsToTeach),
+              _SkillLevelChips(skills: skillsToTeach, isTeachSkills: true),
             ],
 
             const SizedBox(height: 22),
@@ -426,8 +425,6 @@ class _HomeTab extends StatelessWidget {
             ),
 
             const SizedBox(height: 22),
-            const SizedBox(height: 30),
-            _CreditsSection(credits: 100),
           ],
         ),
       ),
@@ -463,6 +460,88 @@ class _HomeTab extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+// ── Skill Level Chips (reads levels from Firestore) ─────────
+class _SkillLevelChips extends StatelessWidget {
+  final List<String> skills;
+  final bool isTeachSkills;
+  const _SkillLevelChips({required this.skills, this.isTeachSkills = false});
+
+  static Color _levelColor(String? level) {
+    switch (level) {
+      case 'Advanced': return const Color(0xFF4CAF50);
+      case 'Medium':   return const Color(0xFF2196F3);
+      case 'Beginner': return const Color(0xFFFF9800);
+      default:         return AppTheme.primaryPurple;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (skills.isEmpty) {
+      return Text('No skills added yet.',
+          style: AppTheme.labelStyle.copyWith(color: AppTheme.textMuted));
+    }
+    if (!isTeachSkills) {
+      // Learn skills — plain chips, no levels
+      return Wrap(spacing: 8, runSpacing: 8, children: skills.map((s) {
+        return Chip(
+          label: Text(s, style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600)),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: BorderSide(color: AppTheme.primaryPurple.withAlpha(110), width: 1),
+          ),
+        );
+      }).toList());
+    }
+
+    return StreamBuilder<Map<String, dynamic>?>(
+      stream: FirestoreService.streamCurrentUserProfile(),
+      builder: (context, snapshot) {
+        final levelMap = (snapshot.data?['skillLevels'] as Map<String, dynamic>?) ?? {};
+        return Wrap(
+          spacing: 10,
+          runSpacing: 12,
+          children: skills.map((s) {
+            final level = levelMap[s] as String?;
+            final color = _levelColor(level);
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: color.withAlpha(130), width: 1.5),
+                    boxShadow: [BoxShadow(color: color.withAlpha(20), blurRadius: 8, offset: const Offset(0, 3))],
+                  ),
+                  child: Text(s, style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, color: AppTheme.textDark)),
+                ),
+                if (level != null) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: color.withAlpha(20),
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    child: Text(
+                      level,
+                      style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w800, fontSize: 11, color: color),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          }).toList(),
+        );
+      },
     );
   }
 }
@@ -1618,54 +1697,6 @@ class _SearchBar extends StatelessWidget {
     );
   }
 }
-
-
-
-class _CreditsSection extends StatelessWidget {
-  final int credits;
-  const _CreditsSection({required this.credits});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withAlpha(220),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(10),
-            blurRadius: 18,
-            offset: const Offset(0, 14),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryPurple.withAlpha(20),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const Icon(Icons.workspace_premium_rounded,
-                color: AppTheme.primaryPurple, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Your Credits: $credits',
-              style: AppTheme.headingSmall.copyWith(fontSize: 18),
-            ),
-          ),
-          const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted),
-        ],
-      ),
-    );
-  }
-}
-
 class _MatchesTab extends StatelessWidget {
   final List<MockMatch> matches;
   final ValueChanged<MockMatch> onOpenMatchProfile;
@@ -2119,6 +2150,7 @@ class _SessionRequestCard extends StatelessWidget {
                         channelName: request.channelName,
                         peerName: _peerName,
                         teacherUid: request.teacherUid,
+                        skill: request.skill,
                         isTeacher: FirebaseAuth.instance.currentUser?.uid ==
                             request.teacherUid,
                       ),
@@ -2169,14 +2201,12 @@ class _ProfileTab extends StatelessWidget {
   final IntentMode intent;
   final ValueChanged<IntentMode> onIntentChanged;
   final List<String> selectedSkills;
-  final int credits;
   final ValueChanged<String> onAction;
 
   const _ProfileTab({
     required this.intent,
     required this.onIntentChanged,
     required this.selectedSkills,
-    required this.credits,
     required this.onAction,
   });
 
@@ -2229,12 +2259,18 @@ class _ProfileTab extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      Text(
-                        '$credits credits available',
-                        style: AppTheme.labelStyle.copyWith(
-                          color: AppTheme.textMuted,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      StreamBuilder<Map<String, dynamic>?>(
+                        stream: FirestoreService.streamCurrentUserProfile(),
+                        builder: (context, snapshot) {
+                          final credits = (snapshot.data?['credits'] as num?)?.toInt() ?? 0;
+                          return Text(
+                            '$credits credits available',
+                            style: AppTheme.labelStyle.copyWith(
+                              color: AppTheme.primaryPurple,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -2308,29 +2344,7 @@ class _ProfileTab extends StatelessWidget {
             style: AppTheme.headingSmall.copyWith(fontSize: 18),
           ),
           const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: selectedSkills.map((s) {
-              return Chip(
-                label: Text(
-                  s,
-                  style: const TextStyle(
-                    fontFamily: 'Outfit',
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                backgroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  side: BorderSide(
-                    color: AppTheme.primaryPurple.withAlpha(110),
-                    width: 1,
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
+          _SkillLevelChips(skills: selectedSkills, isTeachSkills: true),
           const SizedBox(height: 18),
           SizedBox(
             height: 48,
@@ -2549,6 +2563,7 @@ class _UpcomingSessionsSheet extends StatelessWidget {
                                         channelName: session.channelName,
                                         peerName: session.fromName,
                                         teacherUid: session.teacherUid,
+                                        skill: session.skill,
                                         isTeacher: true,
                                       ),
                                     ),

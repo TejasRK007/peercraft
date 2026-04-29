@@ -22,18 +22,82 @@ class FirestoreService {
 
     final displayName = user.displayName ?? user.email?.split('@').first ?? 'User';
 
-    await _usersRef.doc(user.uid).set({
-      'name': displayName,
-      'email': user.email ?? '',
-      'skillsToTeach': skillsToTeach,
-      'skillsToLearn': skillsToLearn,
-      'intent': intent.name,
-      'rating': 4.5,
-      'skillLevel': 'Intermediate',
-      'experienceYears': 1,
-      'sessionsCompleted': 0,
+    // On first save, initialize 100 credits if not yet set
+    await _firestore.runTransaction((tx) async {
+      final docRef = _usersRef.doc(user.uid);
+      final docSnap = await tx.get(docRef);
+      final isNew = !docSnap.exists || !(docSnap.data()?.containsKey('credits') ?? false);
+      tx.set(
+        docRef,
+        {
+          'name': displayName,
+          'email': user.email ?? '',
+          'skillsToTeach': skillsToTeach,
+          'skillsToLearn': skillsToLearn,
+          'intent': intent.name,
+          'rating': 4.5,
+          'skillLevel': 'Intermediate',
+          'experienceYears': 1,
+          'sessionsCompleted': 0,
+          'createdAt': FieldValue.serverTimestamp(),
+          if (isNew) 'credits': 100,
+        },
+        SetOptions(merge: true),
+      );
+    });
+  }
+
+  /// Persist skill proficiency levels from quiz results.
+  static Future<void> saveSkillLevels(Map<String, String> levels) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+    await _usersRef.doc(uid).update({'skillLevels': levels});
+  }
+
+  /// Transfer [creditsToTransfer] from the current learner to the teacher.
+  /// Uses a Firestore transaction to ensure atomicity.
+  static Future<void> processSessionCredits({
+    required String teacherUid,
+    required int creditsToTransfer,
+  }) async {
+    final learnerUid = _auth.currentUser?.uid;
+    if (learnerUid == null) return;
+
+    final learnerRef = _usersRef.doc(learnerUid);
+    final teacherRef = _usersRef.doc(teacherUid);
+
+    await _firestore.runTransaction((tx) async {
+      final learnerSnap = await tx.get(learnerRef);
+      final teacherSnap = await tx.get(teacherRef);
+
+      final learnerCredits =
+          (learnerSnap.data()?['credits'] as num?)?.toInt() ?? 0;
+      final teacherCredits =
+          (teacherSnap.data()?['credits'] as num?)?.toInt() ?? 0;
+
+      // Deduct from learner (floor at 0)
+      tx.update(learnerRef,
+          {'credits': (learnerCredits - creditsToTransfer).clamp(0, 9999)});
+      // Add to teacher
+      tx.update(teacherRef, {'credits': teacherCredits + creditsToTransfer});
+    });
+  }
+
+  /// Write an in-app notification document for [toUid].
+  static Future<void> sendNotification({
+    required String toUid,
+    required String title,
+    required String body,
+  }) async {
+    final fromUid = _auth.currentUser?.uid ?? '';
+    await _firestore.collection('notifications').add({
+      'toUid': toUid,
+      'fromUid': fromUid,
+      'title': title,
+      'body': body,
+      'read': false,
       'createdAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    });
   }
 
   /// Submit a rating for a teacher after a session.

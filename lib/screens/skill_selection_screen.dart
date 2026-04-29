@@ -4,8 +4,7 @@ import 'package:flutter/services.dart';
 import '../app_theme.dart';
 import '../models/intent_mode.dart';
 import '../services/onboarding_preferences_service.dart';
-import '../services/firestore_service.dart';
-import 'home_screen.dart';
+import 'skill_quiz_screen.dart';
 
 class SkillSelectionScreen extends StatefulWidget {
   final IntentMode intent;
@@ -101,35 +100,29 @@ class _SkillSelectionScreenState extends State<SkillSelectionScreen>
     HapticFeedback.lightImpact();
     setState(() => _isSaving = true);
 
-    final learnList = _learnSkills;
-    final teachList = _teachSkills;
-    final allSkills = {...learnList, ...teachList}.toList();
+    final learnList = List<String>.from(_learnSkills);
+    final teachList = List<String>.from(_teachSkills);
 
+    // Only save learn skills now; teach skills will be finalised after quiz
     try {
-      await Future.wait([
-        _prefs.saveSkills(
-          intent: widget.intent,
-          skillsToLearn: learnList,
-          skillsToTeach: teachList,
-        ),
-        FirestoreService.saveUserProfile(
-          intent: widget.intent,
-          skillsToLearn: learnList,
-          skillsToTeach: teachList,
-        ),
-      ]);
+      await _prefs.saveSkills(
+        intent: widget.intent,
+        skillsToLearn: learnList,
+        skillsToTeach: teachList,
+      );
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
 
     if (!mounted) return;
+
+    // Navigate to quiz — it will save final teach skills + levels
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 560),
-        pageBuilder: (_, __, ___) => HomeScreen(
-          selectedSkills: allSkills,
-          skillsToLearn: learnList,
-          skillsToTeach: teachList,
+        pageBuilder: (_, __, ___) => SkillQuizScreen(
+          teachSkills: teachList,
+          learnSkills: learnList,
           intent: widget.intent,
         ),
         transitionsBuilder: (_, animation, __, child) => FadeTransition(

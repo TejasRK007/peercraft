@@ -485,6 +485,7 @@ class _RequestCard extends StatelessWidget {
                         channelName: request.channelName,
                         peerName: _peerName,
                         teacherUid: request.teacherUid,
+                        skill: request.skill,
                         isTeacher: FirebaseAuth.instance.currentUser?.uid ==
                             request.teacherUid,
                       ),

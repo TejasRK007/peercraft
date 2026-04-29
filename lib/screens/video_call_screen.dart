@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 
 import '../app_theme.dart';
 import '../services/firestore_service.dart';
+import 'post_session_quiz_screen.dart';
 
 const String _agoraAppId = 'c10d85c17d4343258f2d525283456b30';
 
@@ -14,12 +15,14 @@ class VideoCallScreen extends StatefulWidget {
   final String peerName;
   final bool isTeacher;
   final String teacherUid;
+  final String skill;
 
   const VideoCallScreen({
     super.key,
     required this.channelName,
     required this.peerName,
     required this.teacherUid,
+    required this.skill,
     this.isTeacher = false,
   });
 
@@ -327,7 +330,20 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     }
 
     if (mounted) {
-      Navigator.of(context).pop();
+      // Learner: launch post-session quiz instead of plain pop
+      if (!widget.isTeacher) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => PostSessionQuizScreen(
+              skill: widget.skill,
+              teacherUid: widget.teacherUid,
+              teacherName: widget.peerName,
+            ),
+          ),
+        );
+      } else {
+        Navigator.of(context).pop();
+      }
     }
   }
 
