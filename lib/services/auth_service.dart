@@ -1,6 +1,6 @@
 /// AuthService — frontend-only mock implementation.
 ///
-/// All methods are designed to mirror a real Firebase Auth surface so that
+/// All methods are designed to mirror a real auth surface so that
 /// swapping this class for a real implementation later requires only changes
 /// inside this file, not in any screen.
 library;
@@ -34,8 +34,8 @@ class AuthService {
   }) async {
     await Future.delayed(const Duration(milliseconds: 1100));
 
-    // TODO: Replace body with:
-    //   final credential = await FirebaseAuth.instance
+    // TODO: Replace body with your real auth provider implementation:
+    //   final credential = await AuthProvider.instance
     //       .signInWithEmailAndPassword(email: email, password: password);
     //   _currentUser = AuthUser(email: credential.user!.email!);
 
@@ -53,8 +53,8 @@ class AuthService {
   }) async {
     await Future.delayed(const Duration(milliseconds: 1300));
 
-    // TODO: Replace body with:
-    //   final credential = await FirebaseAuth.instance
+    // TODO: Replace body with your real auth provider implementation:
+    //   final credential = await AuthProvider.instance
     //       .createUserWithEmailAndPassword(email: email, password: password);
     //   await credential.user!.updateDisplayName(displayName);
     //   _currentUser = AuthUser(email: credential.user!.email!, displayName: displayName);
@@ -67,6 +67,6 @@ class AuthService {
   // ── Sign out ──────────────────────────────────────────────────────────────
   Future<void> signOut() async {
     _currentUser = null;
-    // TODO: await FirebaseAuth.instance.signOut();
+    // TODO: await AuthProvider.instance.signOut();
   }
 }

@@ -300,7 +300,7 @@ class _HomeTab extends StatelessWidget {
     if (intent == IntentMode.teach) {
       return ('Wants to Learn', 'People who want to learn from you', teachThem);
     }
-    // Both is handled separately in layout.
+    // For both intents we display a combined recommended list.
     return ('Recommended Matches', 'Learn from them and teach them', [
       ...learnFromThem,
       ...teachThem,
@@ -323,29 +323,12 @@ class _HomeTab extends StatelessWidget {
             const SizedBox(height: 14),
             _SearchBar(controller: searchController),
             const SizedBox(height: 18),
-
-            if (intent == IntentMode.both) ...[
-              _MatchesSection(
-                title: 'Learn from them',
-                subtitle: 'People who can teach you',
-                matches: learnFromThem,
-                onOpenMatchProfile: onOpenMatchProfile,
-              ),
-              const SizedBox(height: 22),
-              _MatchesSection(
-                title: 'Teach them',
-                subtitle: 'People who want to learn from you',
-                matches: teachThem,
-                onOpenMatchProfile: onOpenMatchProfile,
-              ),
-            ] else ...[
-              _MatchesSection(
-                title: section.$1,
-                subtitle: section.$2,
-                matches: section.$3,
-                onOpenMatchProfile: onOpenMatchProfile,
-              ),
-            ],
+            _MatchesSection(
+              title: section.$1,
+              subtitle: section.$2,
+              matches: section.$3,
+              onOpenMatchProfile: onOpenMatchProfile,
+            ),
 
             const SizedBox(height: 22),
 
@@ -388,15 +371,7 @@ class _HomeTab extends StatelessWidget {
             _QuickActions(onAction: onQuickAction),
 
             const SizedBox(height: 22),
-
-            Text(
-              'AI Suggestions',
-              style: AppTheme.headingSmall.copyWith(fontSize: 18),
-            ),
-            const SizedBox(height: 10),
-            _AiSuggestionCards(onAction: onQuickAction),
-
-            const SizedBox(height: 22),
+            const SizedBox(height: 30),
             _CreditsSection(credits: 100),
           ],
         ),

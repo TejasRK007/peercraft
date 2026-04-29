@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app_theme.dart';
 import '../models/intent_mode.dart';
+import '../services/onboarding_preferences_service.dart';
 import 'skill_selection_screen.dart';
 
 class IntentSelectionScreen extends StatefulWidget {
@@ -21,11 +22,15 @@ class _IntentSelectionScreenState extends State<IntentSelectionScreen>
   late final Animation<Offset> _titleSlide;
   late final Animation<Offset> _card1Slide;
   late final Animation<Offset> _card2Slide;
+  late final Animation<Offset> _card3Slide;
   late final Animation<double> _buttonScale;
 
   // ── Selection state ───────────────────────────────────────────────────────
   bool _learnSelected = false;
   bool _teachSelected = false;
+
+  final _prefs = OnboardingPreferencesService();
+  bool _isNavigating = false;
 
   bool get _anySelected => _learnSelected || _teachSelected;
 
@@ -78,6 +83,14 @@ class _IntentSelectionScreenState extends State<IntentSelectionScreen>
       curve: const Interval(0.35, 0.95, curve: Curves.easeOutCubic),
     ));
 
+    _card3Slide = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _entranceController,
+      curve: const Interval(0.5, 1.0, curve: Curves.easeOutCubic),
+    ));
+
     _buttonScale = Tween<double>(begin: 1.0, end: 0.96).animate(
       CurvedAnimation(parent: _buttonController, curve: Curves.easeInOut),
     );
@@ -90,27 +103,52 @@ class _IntentSelectionScreenState extends State<IntentSelectionScreen>
     super.dispose();
   }
 
-  // ── Toggle a card ─────────────────────────────────────────────────────────
-  void _toggle(bool isLearn) {
+  // ── Select an intent option ───────────────────────────────────────────────
+  void _toggle(IntentMode mode) {
     HapticFeedback.selectionClick();
     setState(() {
-      if (isLearn) {
-        _learnSelected = !_learnSelected;
-      } else {
-        _teachSelected = !_teachSelected;
+      final isSameOption = (mode == IntentMode.learn && _learnSelected && !_teachSelected) ||
+          (mode == IntentMode.teach && _teachSelected && !_learnSelected) ||
+          (mode == IntentMode.both && _learnSelected && _teachSelected);
+
+      if (isSameOption) {
+        _learnSelected = false;
+        _teachSelected = false;
+        return;
       }
+
+      _learnSelected = mode.includesLearn;
+      _teachSelected = mode.includesTeach;
     });
   }
 
   // ── Navigate to Skill Setup ───────────────────────────────────────────────
   Future<void> _onContinue() async {
-    if (!_anySelected) return;
+    if (!_anySelected || _isNavigating) return;
     HapticFeedback.lightImpact();
+
+    setState(() => _isNavigating = true);
 
     await _buttonController.forward();
     await _buttonController.reverse();
 
+    // Persist intent selection locally (skills will be saved next screen).
+    await _prefs.save(intent: _resolvedIntent, selectedSkills: const []);
+
+    // Small loading indicator between screens (demo-friendly).
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        Future<void>.delayed(const Duration(milliseconds: 420), () {
+          if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
+        });
+        return const _SmallLoadingDialog(message: 'Preparing your matches...');
+      },
+    );
+
     if (!mounted) return;
+    setState(() => _isNavigating = false);
 
     Navigator.of(context).push(
       PageRouteBuilder(
@@ -216,7 +254,7 @@ class _IntentSelectionScreenState extends State<IntentSelectionScreen>
                             'Find peers who can teach you what you love.',
                         tag: 'Explorer',
                         tagColor: const Color(0xFF7C5CFC),
-                        onTap: () => _toggle(true),
+                        onTap: () => _toggle(IntentMode.learn),
                       ),
                     ),
 
@@ -241,11 +279,36 @@ class _IntentSelectionScreenState extends State<IntentSelectionScreen>
                             'Share your knowledge and earn credits doing it.',
                         tag: 'Mentor',
                         tagColor: const Color(0xFFFF7B54),
-                        onTap: () => _toggle(false),
+                        onTap: () => _toggle(IntentMode.teach),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // ── Both card (explicit option) ────────────────────────────
+                    SlideTransition(
+                      position: _card3Slide,
+                      child: _IntentCard(
+                        isSelected: _learnSelected && _teachSelected,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF7C5CFC), Color(0xFF2D1B69)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        iconBgColor: const Color(0xFFEDE7FF),
+                        icon: Icons.swap_horiz_rounded,
+                        iconColor: AppTheme.primaryPurple,
+                        emoji: '🔁',
+                        title: 'Both',
+                        description: 'Learn from others and teach what you know.',
+                        tag: 'Learner & Mentor',
+                        tagColor: AppTheme.primaryPurple,
+                        onTap: () => _toggle(IntentMode.both),
                       ),
                     ),
 
                     const Spacer(),
+                    const SizedBox(height: 12),
 
                     // ── Selection hint ────────────────────────────────────
                     AnimatedOpacity(
@@ -341,6 +404,45 @@ class _IntentSelectionScreenState extends State<IntentSelectionScreen>
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SmallLoadingDialog extends StatelessWidget {
+  final String message;
+
+  const _SmallLoadingDialog({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      elevation: 0,
+      backgroundColor: Colors.white.withAlpha(235),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+      ),
+      content: SizedBox(
+        height: 120,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 44,
+              height: 44,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryPurple),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTheme.headingSmall.copyWith(fontSize: 16),
+            ),
+          ],
         ),
       ),
     );

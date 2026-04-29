@@ -154,12 +154,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Learn More &\nImprove Your Skills',
+                            'PeerCraft',
                             style: AppTheme.headlineStyle,
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'Teach what you know. Learn what you love.\nPowered by AI matching.',
+                            'Teach what you know. Learn what you love.\nSmart matches, no backend required.',
                             style: AppTheme.subtitleStyle,
                           ),
                         ],
@@ -178,7 +178,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         children: [
                           _FeaturePill(icon: Icons.people_outline_rounded, label: 'Peer Learning'),
                           const SizedBox(width: 10),
-                          _FeaturePill(icon: Icons.auto_awesome_rounded, label: 'AI Matched'),
+                          _FeaturePill(icon: Icons.auto_awesome_rounded, label: 'Smart Matched'),
                           const SizedBox(width: 10),
                           _FeaturePill(icon: Icons.swap_horiz_rounded, label: 'Skill Swap'),
                         ],
@@ -205,26 +205,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   ),
 
                   const SizedBox(height: 20),
-
-                  // ── Sign-in hint ──────────────────────────────────────────
-                  FadeTransition(
-                    opacity: _fadeIn,
-                    child: RichText(
-                      text: TextSpan(
-                        style: AppTheme.labelStyle,
-                        children: [
-                          const TextSpan(text: 'Already a member? '),
-                          TextSpan(
-                            text: 'Sign In',
-                            style: AppTheme.labelStyle.copyWith(
-                              color: AppTheme.primaryPurple,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
 
                   const SizedBox(height: 28),
                 ],

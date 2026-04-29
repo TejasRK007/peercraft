@@ -77,11 +77,7 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
 
                         _AiCompatibilityCard(
                           matchPercent: match.matchScore,
-                          insights: const [
-                            'Your learning goals align well',
-                            'Both prefer practical sessions',
-                            'Skill levels are compatible',
-                          ],
+                          reasonText: match.matchReason,
                         ),
                         const SizedBox(height: 22),
 
@@ -120,27 +116,19 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
 
                 _BottomActions(
                   onRequestSession: () async {
-                    await showDialog<void>(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (ctx) {
-                        return AlertDialog(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        backgroundColor: AppTheme.deepPurple,
+                        duration: const Duration(seconds: 2),
+                        content: Text(
+                          'Session request sent to ${match.user.name}.\nSlot: ${_slots[_selectedSlotIndex]}',
+                          style: AppTheme.subtitleStyle.copyWith(
+                            color: Colors.white.withAlpha(230),
+                            fontWeight: FontWeight.w700,
                           ),
-                          title: const Text('Session request sent'),
-                          content: Text(
-                            'We’ll notify you when ${match.user.name} responds.\nSlot: ${_slots[_selectedSlotIndex]}',
-                            style: AppTheme.subtitleStyle,
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(ctx).pop(),
-                              child: const Text('OK'),
-                            ),
-                          ],
-                        );
-                      },
+                        ),
+                      ),
                     );
                   },
                   onChatFirst: () {
@@ -426,11 +414,11 @@ class _SkillChips extends StatelessWidget {
 
 class _AiCompatibilityCard extends StatelessWidget {
   final int matchPercent;
-  final List<String> insights;
+  final String reasonText;
 
   const _AiCompatibilityCard({
     required this.matchPercent,
-    required this.insights,
+    required this.reasonText,
   });
 
   @override
@@ -459,41 +447,23 @@ class _AiCompatibilityCard extends StatelessWidget {
           _MatchPercentAnimated(target: matchPercent),
           const SizedBox(height: 6),
           Text(
-            'AI Insights',
+            'Why you matched',
             style: AppTheme.headingSmall.copyWith(
               fontSize: 18,
               color: Colors.white,
             ),
           ),
           const SizedBox(height: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: insights.map((t) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.auto_awesome_rounded,
-                      size: 18,
-                      color: Colors.white70,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        '• $t',
-                        style: const TextStyle(
-                          fontFamily: 'Outfit',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
+          Text(
+            reasonText,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: AppTheme.subtitleStyle.copyWith(
+              fontWeight: FontWeight.w700,
+              fontSize: 14.5,
+              color: Colors.white.withAlpha(230),
+              height: 1.4,
+            ),
           ),
         ],
       ),
@@ -741,7 +711,7 @@ class _BottomActions extends StatelessWidget {
                 ),
               ),
               child: const Text(
-                'Chat First',
+                'Chat',
                 style: TextStyle(
                   fontFamily: 'Outfit',
                   fontWeight: FontWeight.w900,
