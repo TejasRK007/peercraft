@@ -1,12 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/onboarding_preferences_service.dart';
+import '../services/firestore_service.dart';
 
 import '../app_theme.dart';
 import '../models/intent_mode.dart';
 import '../models/mock_matching.dart';
-import '../services/matching_service.dart';
 import 'match_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -33,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _query = '';
 
   List<MockMatch> _matches = const [];
+  StreamSubscription<List<MockMatch>>? _matchSub;
 
   @override
   void initState() {
@@ -49,23 +51,36 @@ class _HomeScreenState extends State<HomeScreen> {
       _isLoading = true;
       _loadingStage = 'Analyzing your skills...';
     });
-    await Future.delayed(const Duration(milliseconds: 900));
+    await Future.delayed(const Duration(milliseconds: 600));
 
-    setState(() {
-      _loadingStage = 'Finding best matches...';
-    });
-    await Future.delayed(const Duration(milliseconds: 850));
-
-    final computed = getMatches(_currentIntent, widget.selectedSkills);
     if (!mounted) return;
-    setState(() {
-      _matches = computed;
-      _isLoading = false;
+    setState(() => _loadingStage = 'Finding best matches...');
+
+    // Cancel any previous subscription
+    _matchSub?.cancel();
+
+    // Subscribe to real-time Firestore matches
+    _matchSub = FirestoreService.streamMatches(
+      intent: _currentIntent,
+      selectedSkills: widget.selectedSkills,
+    ).listen((firestoreMatches) {
+      if (!mounted) return;
+      setState(() {
+        _matches = firestoreMatches;
+        _isLoading = false;
+      });
+    }, onError: (_) {
+      if (!mounted) return;
+      setState(() {
+        _matches = [];
+        _isLoading = false;
+      });
     });
   }
 
   @override
   void dispose() {
+    _matchSub?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -1190,8 +1205,19 @@ class _ProfileTab extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Tejas',
+                        FirebaseAuth.instance.currentUser?.displayName ??
+                            FirebaseAuth.instance.currentUser?.email?.split('@').first ??
+                            'User',
                         style: AppTheme.headingSmall.copyWith(fontSize: 18),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        FirebaseAuth.instance.currentUser?.email ?? '',
+                        style: AppTheme.labelStyle.copyWith(
+                          color: AppTheme.textMuted,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Text(

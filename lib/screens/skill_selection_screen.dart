@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../app_theme.dart';
 import '../models/intent_mode.dart';
 import '../services/onboarding_preferences_service.dart';
+import '../services/firestore_service.dart';
 import 'home_screen.dart';
 
 class SkillSelectionScreen extends StatefulWidget {
@@ -134,7 +135,13 @@ class _SkillSelectionScreenState extends State<SkillSelectionScreen>
     setState(() => _isSaving = true);
 
     try {
-      await _prefs.save(intent: widget.intent, selectedSkills: _selectedSkills);
+      await Future.wait([
+        _prefs.save(intent: widget.intent, selectedSkills: _selectedSkills),
+        FirestoreService.saveUserProfile(
+          intent: widget.intent,
+          selectedSkills: _selectedSkills,
+        ),
+      ]);
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

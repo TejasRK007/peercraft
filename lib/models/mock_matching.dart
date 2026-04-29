@@ -8,7 +8,9 @@ enum MatchSection {
 }
 
 class MockUser {
+  final String uid;
   final String name;
+  final String email;
   final List<String> skillsToTeach;
   final List<String> skillsToLearn;
   final double rating;
@@ -19,7 +21,9 @@ class MockUser {
   final int sessionsCompleted;
 
   const MockUser({
+    this.uid = '',
     required this.name,
+    this.email = '',
     required this.skillsToTeach,
     required this.skillsToLearn,
     required this.rating,
@@ -29,6 +33,55 @@ class MockUser {
     required this.experienceYears,
     required this.sessionsCompleted,
   });
+
+  /// Create a MockUser from a Firestore document snapshot.
+  factory MockUser.fromFirestore(String docId, Map<String, dynamic> data) {
+    // Parse avatar color from stored int, or generate from name hash
+    final colorValue = data['avatarColor'] as int?;
+    final name = (data['name'] as String?) ?? 'User';
+    final avatarColor = colorValue != null
+        ? Color(colorValue)
+        : _colorFromName(name);
+
+    return MockUser(
+      uid: docId,
+      name: name,
+      email: (data['email'] as String?) ?? '',
+      skillsToTeach: List<String>.from(data['skillsToTeach'] ?? []),
+      skillsToLearn: List<String>.from(data['skillsToLearn'] ?? []),
+      rating: (data['rating'] as num?)?.toDouble() ?? 4.5,
+      avatarColor: avatarColor,
+      isTopMentor: (data['sessionsCompleted'] as int? ?? 0) >= 20,
+      skillLevel: (data['skillLevel'] as String?) ?? 'Intermediate',
+      experienceYears: (data['experienceYears'] as int?) ?? 1,
+      sessionsCompleted: (data['sessionsCompleted'] as int?) ?? 0,
+    );
+  }
+
+  /// Convert this user to a Firestore-compatible map.
+  Map<String, dynamic> toFirestore() {
+    return {
+      'name': name,
+      'email': email,
+      'skillsToTeach': skillsToTeach,
+      'skillsToLearn': skillsToLearn,
+      'rating': rating,
+      'avatarColor': avatarColor.toARGB32(),
+      'skillLevel': skillLevel,
+      'experienceYears': experienceYears,
+      'sessionsCompleted': sessionsCompleted,
+    };
+  }
+
+  static Color _colorFromName(String name) {
+    const palette = [
+      Color(0xFF7C5CFC), Color(0xFF4A2FA3), Color(0xFFFF7B54),
+      Color(0xFFFFB347), Color(0xFFB39DDB), Color(0xFF2D1B69),
+      Color(0xFF7E57C2), Color(0xFFFF7F7F),
+    ];
+    final hash = name.codeUnits.fold<int>(0, (prev, c) => prev + c);
+    return palette[hash % palette.length];
+  }
 }
 
 class MockMatch {
@@ -49,96 +102,8 @@ class MockMatch {
   });
 }
 
-const List<MockUser> mockUsers = [
-  MockUser(
-    name: 'Rahul Sharma',
-    skillsToTeach: ['Python', 'Data Science', 'Interview Prep'],
-    skillsToLearn: ['Flutter', 'UI/UX Design'],
-    rating: 4.8,
-    avatarColor: Color(0xFF7C5CFC),
-    isTopMentor: true,
-    skillLevel: 'Advanced',
-    experienceYears: 4,
-    sessionsCompleted: 45,
-  ),
-  MockUser(
-    name: 'Aanya Verma',
-    skillsToTeach: ['Flutter', 'UI/UX Design'],
-    skillsToLearn: ['Python', 'Public Speaking'],
-    rating: 4.7,
-    avatarColor: Color(0xFF4A2FA3),
-    isTopMentor: true,
-    skillLevel: 'Intermediate',
-    experienceYears: 2,
-    sessionsCompleted: 12,
-  ),
-  MockUser(
-    name: 'Rohan Mehta',
-    skillsToTeach: ['Web Development', 'React', 'Java'],
-    skillsToLearn: ['Guitar', 'Public Speaking'],
-    rating: 4.6,
-    avatarColor: Color(0xFFFF7B54),
-    isTopMentor: false,
-    skillLevel: 'Advanced',
-    experienceYears: 3,
-    sessionsCompleted: 28,
-  ),
-  MockUser(
-    name: 'Maya Iyer',
-    skillsToTeach: ['UI/UX Design', 'Communication Skills', 'Drawing'],
-    skillsToLearn: ['Video Editing', 'Photography'],
-    rating: 4.9,
-    avatarColor: Color(0xFFFFB347),
-    isTopMentor: true,
-    skillLevel: 'Advanced',
-    experienceYears: 5,
-    sessionsCompleted: 60,
-  ),
-  MockUser(
-    name: 'Dev Patel',
-    skillsToTeach: ['Web Development', 'DevOps', 'Cybersecurity'],
-    skillsToLearn: ['Data Science', 'AI/ML'],
-    rating: 4.5,
-    avatarColor: Color(0xFFB39DDB),
-    isTopMentor: false,
-    skillLevel: 'Intermediate',
-    experienceYears: 2,
-    sessionsCompleted: 8,
-  ),
-  MockUser(
-    name: 'Zara Khan',
-    skillsToTeach: ['Data Science', 'AI/ML', 'Python'],
-    skillsToLearn: ['Blockchain', 'DevOps'],
-    rating: 4.8,
-    avatarColor: Color(0xFF2D1B69),
-    isTopMentor: true,
-    skillLevel: 'Advanced',
-    experienceYears: 6,
-    sessionsCompleted: 85,
-  ),
-  MockUser(
-    name: 'Ethan Joseph',
-    skillsToTeach: ['Public Speaking', 'Communication Skills'],
-    skillsToLearn: ['Interview Prep', 'Resume Building'],
-    rating: 4.6,
-    avatarColor: Color(0xFF7E57C2),
-    isTopMentor: false,
-    skillLevel: 'Intermediate',
-    experienceYears: 3,
-    sessionsCompleted: 19,
-  ),
-  MockUser(
-    name: 'Sophia Lin',
-    skillsToTeach: ['Photography', 'Video Editing', 'Marketing'],
-    skillsToLearn: ['React', 'Aptitude'],
-    rating: 4.4,
-    avatarColor: Color(0xFFFF7F7F),
-    isTopMentor: false,
-    skillLevel: 'Beginner',
-    experienceYears: 1,
-    sessionsCompleted: 3,
-  ),
-];
+
+
 
 // Helper: used by matching UI to show initials.
 String initialsForName(String name) {
