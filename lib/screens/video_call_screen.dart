@@ -1,0 +1,330 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+import '../app_theme.dart';
+
+const String _agoraAppId = 'c10d85c17d4343258f2d525283456b30';
+
+class VideoCallScreen extends StatefulWidget {
+  final String channelName;
+  final String peerName;
+
+  const VideoCallScreen({
+    super.key,
+    required this.channelName,
+    required this.peerName,
+  });
+
+  @override
+  State<VideoCallScreen> createState() => _VideoCallScreenState();
+}
+
+class _VideoCallScreenState extends State<VideoCallScreen> {
+  late RtcEngine _engine;
+  bool _localUserJoined = false;
+  int? _remoteUid;
+  bool _muted = false;
+  bool _cameraOff = false;
+  bool _isInitializing = true;
+  String _statusText = 'Connecting...';
+
+  @override
+  void initState() {
+    super.initState();
+    _initAgora();
+  }
+
+  Future<void> _initAgora() async {
+    // Request permissions
+    await [Permission.camera, Permission.microphone].request();
+
+    // Create engine
+    _engine = createAgoraRtcEngine();
+    await _engine.initialize(RtcEngineContext(
+      appId: _agoraAppId,
+      channelProfile: ChannelProfileType.channelProfileCommunication,
+    ));
+
+    // Register event handlers
+    _engine.registerEventHandler(RtcEngineEventHandler(
+      onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
+        if (!mounted) return;
+        setState(() {
+          _localUserJoined = true;
+          _isInitializing = false;
+          _statusText = 'Waiting for ${widget.peerName}...';
+        });
+      },
+      onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
+        if (!mounted) return;
+        setState(() {
+          _remoteUid = remoteUid;
+          _statusText = 'Connected';
+        });
+      },
+      onUserOffline: (RtcConnection connection, int remoteUid,
+          UserOfflineReasonType reason) {
+        if (!mounted) return;
+        setState(() {
+          _remoteUid = null;
+          _statusText = '${widget.peerName} left the call';
+        });
+      },
+      onError: (ErrorCodeType code, String msg) {
+        if (!mounted) return;
+        setState(() {
+          _statusText = 'Error: $msg';
+        });
+      },
+    ));
+
+    // Enable video
+    await _engine.enableVideo();
+    await _engine.startPreview();
+
+    // Join channel (no token for testing — use token server for production)
+    await _engine.joinChannel(
+      token: '',
+      channelId: widget.channelName,
+      uid: 0,
+      options: const ChannelMediaOptions(
+        autoSubscribeAudio: true,
+        autoSubscribeVideo: true,
+        publishCameraTrack: true,
+        publishMicrophoneTrack: true,
+        clientRoleType: ClientRoleType.clientRoleBroadcaster,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _engine.leaveChannel();
+    _engine.release();
+    super.dispose();
+  }
+
+  void _onToggleMute() {
+    setState(() => _muted = !_muted);
+    _engine.muteLocalAudioStream(_muted);
+  }
+
+  void _onToggleCamera() {
+    setState(() => _cameraOff = !_cameraOff);
+    _engine.muteLocalVideoStream(_cameraOff);
+  }
+
+  void _onSwitchCamera() {
+    _engine.switchCamera();
+  }
+
+  void _onEndCall() {
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            // ── Remote video (full screen) ────────────────────────────
+            _remoteUid != null
+                ? AgoraVideoView(
+                    controller: VideoViewController.remote(
+                      rtcEngine: _engine,
+                      canvas: VideoCanvas(uid: _remoteUid),
+                      connection:
+                          RtcConnection(channelId: widget.channelName),
+                    ),
+                  )
+                : Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_isInitializing)
+                          const CircularProgressIndicator(
+                            color: AppTheme.primaryPurple,
+                          ),
+                        if (!_isInitializing)
+                          Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppTheme.primaryPurple.withAlpha(40),
+                            ),
+                            child: const Icon(
+                              Icons.person_rounded,
+                              color: AppTheme.primaryPurple,
+                              size: 50,
+                            ),
+                          ),
+                        const SizedBox(height: 20),
+                        Text(
+                          _statusText,
+                          style: const TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+            // ── Local video (small PiP) ───────────────────────────────
+            if (_localUserJoined && !_cameraOff)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 16,
+                right: 16,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: SizedBox(
+                    width: 120,
+                    height: 160,
+                    child: AgoraVideoView(
+                      controller: VideoViewController(
+                        rtcEngine: _engine,
+                        canvas: const VideoCanvas(uid: 0),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // ── Top bar ──────────────────────────────────────────────
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 16,
+              left: 16,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.peerName,
+                    style: const TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _remoteUid != null
+                          ? Colors.green.withAlpha(40)
+                          : Colors.white.withAlpha(20),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      _remoteUid != null ? '● Live' : _statusText,
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: _remoteUid != null
+                            ? Colors.greenAccent
+                            : Colors.white60,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Bottom controls ──────────────────────────────────────
+            Positioned(
+              bottom: MediaQuery.of(context).padding.bottom + 32,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _CallButton(
+                    icon: _muted ? Icons.mic_off_rounded : Icons.mic_rounded,
+                    label: _muted ? 'Unmute' : 'Mute',
+                    color: _muted ? Colors.redAccent : Colors.white24,
+                    onTap: _onToggleMute,
+                  ),
+                  _CallButton(
+                    icon: _cameraOff
+                        ? Icons.videocam_off_rounded
+                        : Icons.videocam_rounded,
+                    label: _cameraOff ? 'Camera On' : 'Camera Off',
+                    color: _cameraOff ? Colors.redAccent : Colors.white24,
+                    onTap: _onToggleCamera,
+                  ),
+                  _CallButton(
+                    icon: Icons.cameraswitch_rounded,
+                    label: 'Flip',
+                    color: Colors.white24,
+                    onTap: _onSwitchCamera,
+                  ),
+                  _CallButton(
+                    icon: Icons.call_end_rounded,
+                    label: 'End',
+                    color: Colors.redAccent,
+                    onTap: _onEndCall,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CallButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _CallButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.white, size: 26),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontFamily: 'Outfit',
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.white70,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

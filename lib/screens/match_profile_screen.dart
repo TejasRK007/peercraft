@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../app_theme.dart';
 import '../models/mock_matching.dart';
+import '../services/session_service.dart';
 import 'chat_screen.dart';
 
 class MatchProfileScreen extends StatefulWidget {
@@ -15,15 +16,61 @@ class MatchProfileScreen extends StatefulWidget {
 }
 
 class _MatchProfileScreenState extends State<MatchProfileScreen> {
-  final _slots = const [
-    'Today 6 PM',
-    'Tomorrow 5 PM',
-  ];
-
   final _sessionTypes = const ['1:1', 'Group'];
-
-  int _selectedSlotIndex = 0;
   String _selectedSessionType = '1:1';
+
+  DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
+
+  String get _formattedSlot {
+    if (_selectedDate == null || _selectedTime == null) return 'Pick a date & time';
+    final d = _selectedDate!;
+    final t = _selectedTime!;
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final hour = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+    final period = t.period == DayPeriod.am ? 'AM' : 'PM';
+    final min = t.minute.toString().padLeft(2, '0');
+    return '${d.day} ${months[d.month - 1]} ${d.year}, $hour:$min $period';
+  }
+
+  bool get _hasSchedule => _selectedDate != null && _selectedTime != null;
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? now,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 30)),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: AppTheme.primaryPurple,
+            onPrimary: Colors.white,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) setState(() => _selectedDate = picked);
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime ?? const TimeOfDay(hour: 18, minute: 0),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: AppTheme.primaryPurple,
+            onPrimary: Colors.white,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) setState(() => _selectedTime = picked);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -112,8 +159,9 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
                         ),
                         const SizedBox(height: 22),
 
+                        // ── Schedule Session ─────────────────────
                         Text(
-                          'Session Info',
+                          'Schedule Session',
                           style: AppTheme.headingSmall.copyWith(fontSize: 18),
                         ),
                         const SizedBox(height: 10),
@@ -124,21 +172,120 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
                           onChanged: (v) =>
                               setState(() => _selectedSessionType = v),
                         ),
-                        const SizedBox(height: 16),
-                        _SlotsPicker(
-                          slots: _slots,
-                          selectedIndex: _selectedSlotIndex,
-                          onChanged: (i) =>
-                              setState(() => _selectedSlotIndex = i),
+                        const SizedBox(height: 14),
+
+                        // Date & Time pickers
+                        Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: _pickDate,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withAlpha(230),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: _selectedDate != null
+                                          ? AppTheme.primaryPurple.withAlpha(160)
+                                          : AppTheme.primaryPurple.withAlpha(60),
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.calendar_today_rounded,
+                                          size: 18,
+                                          color: _selectedDate != null
+                                              ? AppTheme.primaryPurple
+                                              : AppTheme.textMuted),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        _selectedDate != null
+                                            ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
+                                            : 'Select Date',
+                                        style: AppTheme.labelStyle.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          color: _selectedDate != null
+                                              ? AppTheme.deepPurple
+                                              : AppTheme.textMuted,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: _pickTime,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withAlpha(230),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: _selectedTime != null
+                                          ? AppTheme.primaryPurple.withAlpha(160)
+                                          : AppTheme.primaryPurple.withAlpha(60),
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.access_time_rounded,
+                                          size: 18,
+                                          color: _selectedTime != null
+                                              ? AppTheme.primaryPurple
+                                              : AppTheme.textMuted),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        _selectedTime != null
+                                            ? _selectedTime!.format(context)
+                                            : 'Select Time',
+                                        style: AppTheme.labelStyle.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          color: _selectedTime != null
+                                              ? AppTheme.deepPurple
+                                              : AppTheme.textMuted,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 10),
-                        Text(
-                          'Selected: ${_slots[_selectedSlotIndex]} • $_selectedSessionType',
-                          style: AppTheme.subtitleStyle.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.textMuted,
+
+                        // Selected summary
+                        if (_hasSchedule)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryPurple.withAlpha(12),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppTheme.primaryPurple.withAlpha(50)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.event_available_rounded,
+                                    size: 18, color: AppTheme.primaryPurple),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    '$_formattedSlot • $_selectedSessionType',
+                                    style: AppTheme.labelStyle.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      color: AppTheme.deepPurple,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
                         const SizedBox(height: 22),
                       ],
                     ),
@@ -146,21 +293,48 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
                 ),
 
                 _BottomActions(
+                  canSend: _hasSchedule,
                   onRequestSession: () async {
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        backgroundColor: AppTheme.deepPurple,
-                        duration: const Duration(seconds: 2),
-                        content: Text(
-                          'Session request sent to ${match.user.name}.\nSlot: ${_slots[_selectedSlotIndex]}',
-                          style: AppTheme.subtitleStyle.copyWith(
-                            color: Colors.white.withAlpha(230),
-                            fontWeight: FontWeight.w700,
+                    if (!_hasSchedule || !mounted) return;
+                    final messenger = ScaffoldMessenger.of(context);
+                    final slot = _formattedSlot;
+                    final sType = _selectedSessionType;
+                    try {
+                      await SessionService.sendRequest(
+                        toUid: match.user.uid,
+                        toName: match.user.name,
+                        skill: match.matchSkill,
+                        slot: slot,
+                        sessionType: sType,
+                      );
+                      messenger.showSnackBar(
+                        SnackBar(
+                          backgroundColor: const Color(0xFF4CAF50),
+                          duration: const Duration(seconds: 2),
+                          content: Text(
+                            'Session request sent to ${match.user.name}!\n$slot • $sType',
+                            style: AppTheme.subtitleStyle.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
-                      ),
-                    );
+                      );
+                    } catch (e) {
+                      messenger.showSnackBar(
+                        SnackBar(
+                          backgroundColor: Colors.redAccent,
+                          duration: const Duration(seconds: 3),
+                          content: Text(
+                            'Failed to send request: $e',
+                            style: AppTheme.subtitleStyle.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
                   },
                   onChatFirst: () {
                     Navigator.of(context).push(
@@ -611,89 +785,13 @@ class _SessionTypePicker extends StatelessWidget {
   }
 }
 
-class _SlotsPicker extends StatelessWidget {
-  final List<String> slots;
-  final int selectedIndex;
-  final ValueChanged<int> onChanged;
-
-  const _SlotsPicker({
-    required this.slots,
-    required this.selectedIndex,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Available Time Slots',
-          style: AppTheme.labelStyle.copyWith(
-            fontWeight: FontWeight.w900,
-            color: AppTheme.textMuted,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: List.generate(slots.length, (i) {
-            final selected = i == selectedIndex;
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => onChanged(i),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 240),
-                  height: 46,
-                  margin: EdgeInsets.only(
-                    right: i == 0 ? 10 : 0,
-                    left: i == slots.length - 1 ? 10 : 0,
-                  ),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? AppTheme.primaryPurple.withAlpha(18)
-                        : Colors.white.withAlpha(230),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: selected
-                          ? AppTheme.primaryPurple.withAlpha(160)
-                          : AppTheme.primaryPurple.withAlpha(60),
-                      width: 1.2,
-                    ),
-                    boxShadow: selected
-                        ? [
-                            BoxShadow(
-                              color: AppTheme.primaryPurple.withAlpha(60),
-                              blurRadius: 20,
-                              offset: const Offset(0, 12),
-                            )
-                          ]
-                        : [],
-                  ),
-                  child: Center(
-                    child: Text(
-                      slots[i],
-                      style: AppTheme.labelStyle.copyWith(
-                        color: selected ? AppTheme.primaryPurple : AppTheme.textMuted,
-                        fontWeight: FontWeight.w900,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-      ],
-    );
-  }
-}
-
 class _BottomActions extends StatelessWidget {
+  final bool canSend;
   final Future<void> Function() onRequestSession;
   final VoidCallback onChatFirst;
 
   const _BottomActions({
+    required this.canSend,
     required this.onRequestSession,
     required this.onChatFirst,
   });
@@ -704,9 +802,12 @@ class _BottomActions extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
       child: Row(
         children: [
+          // Request Session
           Expanded(
-            child: ElevatedButton(
-              onPressed: onRequestSession,
+            child: ElevatedButton.icon(
+              onPressed: canSend ? onRequestSession : null,
+              icon: const Icon(Icons.send_rounded, size: 18),
+              label: const Text('Request Session'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryPurple,
                 foregroundColor: Colors.white,
@@ -715,23 +816,24 @@ class _BottomActions extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
-              ),
-              child: const Text(
-                'Request Session',
-                style: TextStyle(
+                textStyle: const TextStyle(
                   fontFamily: 'Outfit',
                   fontWeight: FontWeight.w900,
-                  fontSize: 14.5,
+                  fontSize: 14,
                 ),
               ),
             ),
           ),
           const SizedBox(width: 12),
+          // Chat
           Expanded(
-            child: OutlinedButton(
+            child: OutlinedButton.icon(
               onPressed: onChatFirst,
+              icon: const Icon(Icons.chat_rounded, size: 18),
+              label: const Text('Chat'),
               style: OutlinedButton.styleFrom(
                 backgroundColor: Colors.white.withAlpha(230),
+                foregroundColor: AppTheme.primaryPurple,
                 side: BorderSide(
                   color: AppTheme.primaryPurple.withAlpha(160),
                   width: 1.3,
@@ -740,18 +842,14 @@ class _BottomActions extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
-              ),
-              child: const Text(
-                'Chat',
-                style: TextStyle(
+                textStyle: const TextStyle(
                   fontFamily: 'Outfit',
                   fontWeight: FontWeight.w900,
-                  fontSize: 14.5,
-                  color: AppTheme.primaryPurple,
+                  fontSize: 14,
                 ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );

@@ -4,11 +4,15 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/onboarding_preferences_service.dart';
 import '../services/firestore_service.dart';
+import '../services/session_service.dart';
 
 import '../app_theme.dart';
+import '../main.dart';
 import '../models/intent_mode.dart';
 import '../models/mock_matching.dart';
 import 'match_profile_screen.dart';
+import 'session_requests_screen.dart';
+import 'video_call_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<String> selectedSkills;
@@ -286,7 +290,7 @@ class _LoadingOverlay extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Using mock data — matching updates instantly.',
+                    'Using real-time Firestore data.',
                     textAlign: TextAlign.center,
                     style: AppTheme.subtitleStyle,
                   )
@@ -824,6 +828,88 @@ class _Greeting extends StatelessWidget {
           style: AppTheme.headlineStyle.copyWith(fontSize: 30),
         ),
         const Spacer(),
+        // Notification bell with live badge
+        StreamBuilder<int>(
+          stream: SessionService.streamPendingCount(),
+          builder: (context, snapshot) {
+            final count = snapshot.data ?? 0;
+            return GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  PageRouteBuilder(
+                    transitionDuration: const Duration(milliseconds: 420),
+                    pageBuilder: (_, __, ___) => const SessionRequestsScreen(),
+                    transitionsBuilder: (_, animation, __, child) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0, 0.06),
+                            end: Offset.zero,
+                          ).animate(CurvedAnimation(
+                            parent: animation,
+                            curve: Curves.easeOutCubic,
+                          )),
+                          child: child,
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+              child: Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(10),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    const Icon(
+                      Icons.notifications_rounded,
+                      color: AppTheme.deepPurple,
+                      size: 22,
+                    ),
+                    if (count > 0)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: Container(
+                          width: 18,
+                          height: 18,
+                          decoration: const BoxDecoration(
+                            color: Colors.redAccent,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              count > 9 ? '9+' : '$count',
+                              style: const TextStyle(
+                                fontFamily: 'Outfit',
+                                fontWeight: FontWeight.w900,
+                                fontSize: 10,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(width: 10),
         _IntentPill(intent: intent),
       ],
     );
@@ -1101,55 +1187,342 @@ class _SessionsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 14, 24, 88),
-        children: [
-          Text(
-            'Sessions',
-            style: AppTheme.headingSmall.copyWith(fontSize: 24),
+      child: DefaultTabController(
+        length: 2,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 14, 24, 10),
+              child: Text(
+                'Sessions',
+                style: AppTheme.headingSmall.copyWith(fontSize: 24),
+              ),
+            ),
+            // Tab bar
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              height: 46,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(180),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: TabBar(
+                indicator: BoxDecoration(
+                  gradient: AppTheme.buttonGradient,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                labelColor: Colors.white,
+                unselectedLabelColor: AppTheme.textMuted,
+                labelStyle: const TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+                tabs: const [
+                  Tab(text: 'Incoming'),
+                  Tab(text: 'Sent'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _IncomingRequestsList(),
+                  _SentRequestsList(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _IncomingRequestsList extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<SessionRequest>>(
+      stream: SessionService.streamIncomingRequests(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppTheme.primaryPurple),
+          );
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Text('Error: ${snapshot.error}',
+                style: AppTheme.subtitleStyle.copyWith(color: Colors.redAccent)),
+          );
+        }
+        final requests = snapshot.data ?? [];
+        if (requests.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.inbox_rounded, size: 48, color: AppTheme.textMuted.withAlpha(120)),
+                const SizedBox(height: 12),
+                Text('No incoming requests', style: AppTheme.subtitleStyle),
+              ],
+            ),
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          itemCount: requests.length,
+          itemBuilder: (context, i) => _SessionRequestCard(
+            request: requests[i],
+            isIncoming: true,
           ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(230),
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(9),
-                  blurRadius: 18,
-                  offset: const Offset(0, 14),
+        );
+      },
+    );
+  }
+}
+
+class _SentRequestsList extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<SessionRequest>>(
+      stream: SessionService.streamSentRequests(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppTheme.primaryPurple),
+          );
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Text('Error: ${snapshot.error}',
+                style: AppTheme.subtitleStyle.copyWith(color: Colors.redAccent)),
+          );
+        }
+        final requests = snapshot.data ?? [];
+        if (requests.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.send_rounded, size: 48, color: AppTheme.textMuted.withAlpha(120)),
+                const SizedBox(height: 12),
+                Text('No sent requests', style: AppTheme.subtitleStyle),
+              ],
+            ),
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          itemCount: requests.length,
+          itemBuilder: (context, i) => _SessionRequestCard(
+            request: requests[i],
+            isIncoming: false,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SessionRequestCard extends StatelessWidget {
+  final SessionRequest request;
+  final bool isIncoming;
+  const _SessionRequestCard({required this.request, required this.isIncoming});
+
+  Color get _statusColor {
+    switch (request.status) {
+      case 'pending': return const Color(0xFFFFB347);
+      case 'accepted': return const Color(0xFF4CAF50);
+      case 'rejected': return Colors.redAccent;
+      default: return AppTheme.textMuted;
+    }
+  }
+
+  IconData get _statusIcon {
+    switch (request.status) {
+      case 'pending': return Icons.schedule_rounded;
+      case 'accepted': return Icons.check_circle_rounded;
+      case 'rejected': return Icons.cancel_rounded;
+      default: return Icons.help_outline_rounded;
+    }
+  }
+
+  String get _peerName => isIncoming ? request.fromName : request.toName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(240),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(8),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: AppTheme.primaryPurple,
+                child: Text(
+                  _peerName.isNotEmpty ? _peerName[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                    fontFamily: 'Outfit', fontWeight: FontWeight.w900,
+                    fontSize: 16, color: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_peerName, style: AppTheme.headingSmall.copyWith(fontSize: 15)),
+                    Text(
+                      isIncoming ? 'wants to connect' : 'request sent',
+                      style: AppTheme.labelStyle.copyWith(color: AppTheme.textMuted, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _statusColor.withAlpha(20),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _statusColor.withAlpha(80)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(_statusIcon, size: 12, color: _statusColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      request.status[0].toUpperCase() + request.status.substring(1),
+                      style: TextStyle(
+                        fontFamily: 'Outfit', fontWeight: FontWeight.w800,
+                        fontSize: 10, color: _statusColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Info row
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _chip(Icons.auto_awesome_rounded, request.skill),
+              _chip(Icons.schedule_rounded, request.slot),
+              _chip(Icons.people_rounded, request.sessionType),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Actions
+          if (isIncoming && request.status == 'pending')
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => SessionService.acceptRequest(request.id),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4CAF50),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      textStyle: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w800, fontSize: 13),
+                    ),
+                    child: const Text('Accept'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => SessionService.rejectRequest(request.id),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.redAccent,
+                      side: const BorderSide(color: Colors.redAccent),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      textStyle: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w800, fontSize: 13),
+                    ),
+                    child: const Text('Reject'),
+                  ),
                 ),
               ],
             ),
-            child: Text(
-              'Session requests and schedules will appear here. (Demo placeholder)',
-              style: AppTheme.subtitleStyle,
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: () => onAction('Start a session (demo)'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryPurple,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+          if (request.status == 'accepted')
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => VideoCallScreen(
+                        channelName: request.channelName,
+                        peerName: _peerName,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.videocam_rounded, size: 18),
+                label: const Text('Join Video Call'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryPurple,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  textStyle: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w900, fontSize: 13),
                 ),
               ),
-              child: const Text(
-                'Start Session',
-                style: TextStyle(
-                  fontFamily: 'Outfit',
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
             ),
-          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryPurple.withAlpha(10),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppTheme.primaryPurple.withAlpha(40)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: AppTheme.primaryPurple),
+          const SizedBox(width: 4),
+          Text(text, style: const TextStyle(
+            fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 11,
+            color: AppTheme.deepPurple,
+          )),
         ],
       ),
     );
@@ -1358,7 +1731,13 @@ class _ProfileTab extends StatelessWidget {
                 // Clear local data and sign out of Firebase
                 await OnboardingPreferencesService().clear();
                 await FirebaseAuth.instance.signOut();
-                // The StreamBuilder in main.dart will automatically catch this and redirect to OnboardingScreen!
+                // Navigate to root — AuthGate will redirect to login
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const AuthGate()),
+                    (route) => false,
+                  );
+                }
               },
               style: OutlinedButton.styleFrom(
                 backgroundColor: const Color(0xFFFFF0F0),

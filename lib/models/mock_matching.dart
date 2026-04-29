@@ -107,7 +107,7 @@ class MockMatch {
 
 // Helper: used by matching UI to show initials.
 String initialsForName(String name) {
-  final parts = name.trim().split(RegExp(r'\\s+'));
+  final parts = name.trim().split(RegExp(r'\s+'));
   final first = parts.isNotEmpty ? parts.first : '';
   final second = parts.length > 1 ? parts[1] : '';
   final chars = (first + second).replaceAll(RegExp(r'[^A-Za-z]'), '');
