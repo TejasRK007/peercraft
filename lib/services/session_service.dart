@@ -162,6 +162,33 @@ class SessionService {
     });
   }
 
+  /// Stream accepted sessions where current user is the teacher.
+  static Stream<List<SessionRequest>> streamTeacherAcceptedSessions() {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return Stream.value([]);
+
+    return _ref
+        .where('teacherUid', isEqualTo: uid)
+        .snapshots()
+        .map((snap) {
+      final list = snap.docs
+          .map((doc) => SessionRequest.fromFirestore(doc.id, doc.data()))
+          .where((req) => req.status == 'accepted')
+          .toList();
+      // Sort newest first (client-side)
+      list.sort((a, b) {
+        final aTime = a.createdAt ?? DateTime(2000);
+        final bTime = b.createdAt ?? DateTime(2000);
+        return bTime.compareTo(aTime);
+      });
+      return list;
+    }).handleError((error) {
+      // ignore: avoid_print
+      print('[SessionService] streamTeacherAcceptedSessions error: $error');
+      return <SessionRequest>[];
+    });
+  }
+
   /// Stream count of pending incoming requests (for badge).
   static Stream<int> streamPendingCount() {
     final uid = _auth.currentUser?.uid;

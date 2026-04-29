@@ -140,6 +140,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showUpcomingSessions() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _UpcomingSessionsSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredMatches();
@@ -191,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           return;
                         }
                         if (action == 'Teach Now') {
-                          _showSnack('Teach Now (demo)');
+                          _showUpcomingSessions();
                           return;
                         }
                         _showSnack('$action (demo)');
@@ -409,6 +418,7 @@ class _HomeTab extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             _QuickActions(
+              intent: intent,
               onAction: onQuickAction,
               skillsToLearn: skillsToLearn,
               allMatches: allMatches,
@@ -948,12 +958,14 @@ class _MatchCard extends StatelessWidget {
 
 
 class _QuickActions extends StatelessWidget {
+  final IntentMode intent;
   final ValueChanged<String> onAction;
   final List<String> skillsToLearn;
   final List<MockMatch> allMatches;
   final ValueChanged<MockMatch> onOpenMatchProfile;
 
   const _QuickActions({
+    required this.intent,
     required this.onAction,
     required this.skillsToLearn,
     required this.allMatches,
@@ -986,14 +998,16 @@ class _QuickActions extends StatelessWidget {
                 onTap: () => _showFindMatchSheet(context),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _ActionButton(
-                label: 'Teach Now',
-                icon: Icons.lightbulb_rounded,
-                onTap: () => onAction('Teach Now'),
+            if (intent == IntentMode.teach) ...[
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ActionButton(
+                  label: 'Teach Now',
+                  icon: Icons.lightbulb_rounded,
+                  onTap: () => onAction('Teach Now'),
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ],
@@ -2382,6 +2396,185 @@ class _ProfileTab extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UpcomingSessionsSheet extends StatelessWidget {
+  const _UpcomingSessionsSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Text(
+                'Upcoming Sessions',
+                style: AppTheme.headingSmall.copyWith(fontSize: 20),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          StreamBuilder<List<SessionRequest>>(
+            stream: SessionService.streamTeacherAcceptedSessions(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(40),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+              final sessions = snapshot.data ?? [];
+              if (sessions.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Column(
+                    children: [
+                      Icon(Icons.video_camera_back_outlined,
+                          size: 48, color: AppTheme.textMuted.withAlpha(100)),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No upcoming sessions found.',
+                        style: AppTheme.labelStyle
+                            .copyWith(color: AppTheme.textMuted),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.6,
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: sessions.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final session = sessions[index];
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryPurple.withAlpha(10),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: AppTheme.primaryPurple.withAlpha(30)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor:
+                                    AppTheme.primaryPurple.withAlpha(40),
+                                child: Text(
+                                  session.fromName.isNotEmpty
+                                      ? session.fromName[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.primaryPurple),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      session.fromName,
+                                      style: AppTheme.labelStyle.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16),
+                                    ),
+                                    Text(
+                                      'Learning: ${session.skill}',
+                                      style: AppTheme.labelStyle.copyWith(
+                                          fontSize: 13,
+                                          color: AppTheme.textMuted),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 24),
+                          Row(
+                            children: [
+                              const Icon(Icons.access_time_rounded,
+                                  size: 16, color: AppTheme.primaryPurple),
+                              const SizedBox(width: 8),
+                              Text(
+                                session.slot,
+                                style: AppTheme.labelStyle
+                                    .copyWith(fontWeight: FontWeight.w700),
+                              ),
+                              const Spacer(),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => VideoCallScreen(
+                                        channelName: session.channelName,
+                                        peerName: session.fromName,
+                                        teacherUid: session.teacherUid,
+                                        isTeacher: true,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryPurple,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                ),
+                                child: const Text('Join Call'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 10),
         ],
       ),
     );
