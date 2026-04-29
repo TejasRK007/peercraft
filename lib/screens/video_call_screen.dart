@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
 
 import '../app_theme.dart';
+import '../services/firestore_service.dart';
 
 const String _agoraAppId = 'c10d85c17d4343258f2d525283456b30';
 
@@ -12,11 +13,13 @@ class VideoCallScreen extends StatefulWidget {
   final String channelName;
   final String peerName;
   final bool isTeacher;
+  final String teacherUid;
 
   const VideoCallScreen({
     super.key,
     required this.channelName,
     required this.peerName,
+    required this.teacherUid,
     this.isTeacher = false,
   });
 
@@ -210,6 +213,117 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
           );
         }
       }
+    } else {
+      // Is Learner -> Show rating dialog
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) {
+          int rating = 0;
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                title: Text(
+                  'Rate Your Session',
+                  style: AppTheme.headingSmall.copyWith(fontSize: 20),
+                  textAlign: TextAlign.center,
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'How was your learning session with ${widget.peerName}?',
+                      style: AppTheme.subtitleStyle,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(5, (index) {
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              rating = index + 1;
+                            });
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Icon(
+                              index < rating
+                                  ? Icons.star_rounded
+                                  : Icons.star_outline_rounded,
+                              color: const Color(0xFFFFC857),
+                              size: 40,
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
+                ),
+                actionsAlignment: MainAxisAlignment.center,
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text(
+                      'Skip',
+                      style: AppTheme.labelStyle.copyWith(
+                        color: AppTheme.textMuted,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: rating > 0
+                        ? () async {
+                            Navigator.of(ctx).pop();
+                            
+                            // Submit rating to Firestore
+                            await FirestoreService.submitRating(widget.teacherUid, rating);
+
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  'Thank you for your feedback!',
+                                  style: TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                                backgroundColor: AppTheme.primaryPurple,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            );
+                          }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryPurple,
+                      disabledBackgroundColor: AppTheme.primaryPurple.withAlpha(80),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Submit',
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
     }
 
     if (mounted) {

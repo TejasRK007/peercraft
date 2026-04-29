@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/onboarding_preferences_service.dart';
 import '../services/firestore_service.dart';
@@ -173,6 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                       selectedSkills: widget.selectedSkills,
                       skillsToLearn: widget.skillsToLearn,
+                      skillsToTeach: widget.skillsToTeach,
                       allMatches: _matches,
                       searchController: _searchController,
                       learnFromThem: learnFromThem,
@@ -311,6 +313,7 @@ class _HomeTab extends StatelessWidget {
   final ValueChanged<IntentMode> onIntentChanged;
   final List<String> selectedSkills;
   final List<String> skillsToLearn;
+  final List<String> skillsToTeach;
   final List<MockMatch> allMatches;
   final TextEditingController searchController;
   final List<MockMatch> learnFromThem;
@@ -324,6 +327,7 @@ class _HomeTab extends StatelessWidget {
     required this.onIntentChanged,
     required this.selectedSkills,
     required this.skillsToLearn,
+    required this.skillsToTeach,
     required this.allMatches,
     required this.searchController,
     required this.learnFromThem,
@@ -362,43 +366,40 @@ class _HomeTab extends StatelessWidget {
             const SizedBox(height: 14),
             _SearchBar(controller: searchController),
             const SizedBox(height: 18),
-            _MatchesSection(
-              title: section.$1,
-              subtitle: section.$2,
-              matches: section.$3,
-              onOpenMatchProfile: onOpenMatchProfile,
-            ),
+            if (intent == IntentMode.teach)
+              const _TeacherRatingGraph()
+            else
+              _MatchesSection(
+                title: section.$1,
+                subtitle: section.$2,
+                matches: section.$3,
+                onOpenMatchProfile: onOpenMatchProfile,
+              ),
 
             const SizedBox(height: 22),
 
-            Text(
-              'Your Skills',
-              style: AppTheme.headingSmall.copyWith(fontSize: 18),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: selectedSkills.map((s) {
-                return Chip(
-                  label: Text(
-                    s,
-                    style: const TextStyle(
-                      fontFamily: 'Outfit',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  backgroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    side: BorderSide(
-                      color: AppTheme.primaryPurple.withAlpha(110),
-                      width: 1,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
+            if (intent == IntentMode.teach) ...[
+              Text(
+                'Skills you can teach',
+                style: AppTheme.headingSmall.copyWith(fontSize: 18),
+              ),
+              const SizedBox(height: 10),
+              _buildSkillChips(skillsToTeach),
+            ] else ...[
+              Text(
+                'Skills to Learn',
+                style: AppTheme.headingSmall.copyWith(fontSize: 18),
+              ),
+              const SizedBox(height: 10),
+              _buildSkillChips(skillsToLearn),
+              const SizedBox(height: 22),
+              Text(
+                'Your Skills',
+                style: AppTheme.headingSmall.copyWith(fontSize: 18),
+              ),
+              const SizedBox(height: 10),
+              _buildSkillChips(skillsToTeach),
+            ],
 
             const SizedBox(height: 22),
 
@@ -420,6 +421,38 @@ class _HomeTab extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSkillChips(List<String> skills) {
+    if (skills.isEmpty) {
+      return Text(
+        'No skills added yet.',
+        style: AppTheme.labelStyle.copyWith(color: AppTheme.textMuted),
+      );
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: skills.map((s) {
+        return Chip(
+          label: Text(
+            s,
+            style: const TextStyle(
+              fontFamily: 'Outfit',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: BorderSide(
+              color: AppTheme.primaryPurple.withAlpha(110),
+              width: 1,
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
@@ -500,6 +533,180 @@ class _MatchesSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _TeacherRatingGraph extends StatelessWidget {
+  const _TeacherRatingGraph();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<Map<String, dynamic>?>(
+      stream: FirestoreService.streamCurrentUserProfile(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox(
+            height: 200,
+            child: Center(
+                child: CircularProgressIndicator(color: AppTheme.primaryPurple)),
+          );
+        }
+
+        final data = snapshot.data!;
+        final historyRaw = data['ratingHistory'] as List<dynamic>? ?? [4.5];
+        final history = historyRaw.map((e) => (e as num).toDouble()).toList();
+
+        // Ensure there's at least one point to draw a line
+        if (history.length == 1) {
+          history.insert(0, history.first); // Duplicate to draw a flat line
+        }
+
+        // Limit to last 10 ratings for graph clarity
+        final displayHistory =
+            history.length > 10 ? history.sublist(history.length - 10) : history;
+
+        final spots = List.generate(
+          displayHistory.length,
+          (i) => FlSpot(i.toDouble(), displayHistory[i]),
+        );
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(8),
+                blurRadius: 18,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Your Rating Trend',
+                    style: AppTheme.headingSmall.copyWith(fontSize: 18),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryPurple.withAlpha(20),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star_rounded,
+                            color: Color(0xFFFFC857), size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          (data['rating'] as num?)?.toStringAsFixed(1) ?? '4.5',
+                          style: const TextStyle(
+                            fontFamily: 'Outfit',
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.primaryPurple,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Recent feedback from learners',
+                style: AppTheme.subtitleStyle.copyWith(fontSize: 13),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                height: 180,
+                child: LineChart(
+                  LineChartData(
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      horizontalInterval: 1,
+                      getDrawingHorizontalLine: (value) {
+                        return FlLine(
+                          color: Colors.grey.withAlpha(40),
+                          strokeWidth: 1,
+                        );
+                      },
+                    ),
+                    titlesData: FlTitlesData(
+                      show: true,
+                      rightTitles:
+                          AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      topTitles:
+                          AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      bottomTitles:
+                          AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          interval: 1,
+                          reservedSize: 28,
+                          getTitlesWidget: (value, meta) {
+                            if (value == 0 || value > 5) {
+                              return const SizedBox.shrink();
+                            }
+                            return Text(
+                              value.toInt().toString(),
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                color: AppTheme.textMuted,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    borderData: FlBorderData(show: false),
+                    minX: 0,
+                    maxX: (displayHistory.length - 1).toDouble(),
+                    minY: 1,
+                    maxY: 5,
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: spots,
+                        isCurved: true,
+                        color: AppTheme.primaryPurple,
+                        barWidth: 3,
+                        isStrokeCapRound: true,
+                        dotData: FlDotData(
+                          show: true,
+                          getDotPainter: (spot, percent, barData, index) {
+                            return FlDotCirclePainter(
+                              radius: 4,
+                              color: Colors.white,
+                              strokeWidth: 2,
+                              strokeColor: AppTheme.primaryPurple,
+                            );
+                          },
+                        ),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          color: AppTheme.primaryPurple.withAlpha(30),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -782,18 +989,12 @@ class _QuickActions extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _ActionButton(
-                label: 'Start Session',
-                icon: Icons.history_rounded,
-                onTap: () => onAction('Start Session'),
+                label: 'Teach Now',
+                icon: Icons.lightbulb_rounded,
+                onTap: () => onAction('Teach Now'),
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 12),
-        _ActionButton(
-          label: 'Teach Now',
-          icon: Icons.lightbulb_rounded,
-          onTap: () => onAction('Teach Now'),
         ),
       ],
     );
@@ -1256,7 +1457,7 @@ class _Greeting extends StatelessWidget {
                 Navigator.of(context).push(
                   PageRouteBuilder(
                     transitionDuration: const Duration(milliseconds: 420),
-                    pageBuilder: (_, __, ___) => const SessionRequestsScreen(),
+                    pageBuilder: (_, __, ___) => SessionRequestsScreen(intent: intent),
                     transitionsBuilder: (_, animation, __, child) {
                       return FadeTransition(
                         opacity: animation,
@@ -1903,6 +2104,9 @@ class _SessionRequestCard extends StatelessWidget {
                       builder: (_) => VideoCallScreen(
                         channelName: request.channelName,
                         peerName: _peerName,
+                        teacherUid: request.teacherUid,
+                        isTeacher: FirebaseAuth.instance.currentUser?.uid ==
+                            request.teacherUid,
                       ),
                     ),
                   );

@@ -36,6 +36,43 @@ class FirestoreService {
     }, SetOptions(merge: true));
   }
 
+  /// Submit a rating for a teacher after a session.
+  static Future<void> submitRating(String teacherUid, int rating) async {
+    final docRef = _usersRef.doc(teacherUid);
+
+    await _firestore.runTransaction((transaction) async {
+      final doc = await transaction.get(docRef);
+      if (!doc.exists) return;
+
+      final data = doc.data()!;
+      int count = (data['ratingCount'] as num?)?.toInt() ?? 1;
+      double sum = (data['ratingSum'] as num?)?.toDouble() ??
+          ((data['rating'] as num?)?.toDouble() ?? 4.5) * count;
+
+      count += 1;
+      sum += rating;
+
+      final newAverage = sum / count;
+
+      List<dynamic> history = data['ratingHistory'] ?? [4.5];
+      history.add(rating.toDouble());
+
+      transaction.update(docRef, {
+        'ratingCount': count,
+        'ratingSum': sum,
+        'rating': newAverage,
+        'ratingHistory': history,
+      });
+    });
+  }
+
+  /// Stream current user's profile
+  static Stream<Map<String, dynamic>?> streamCurrentUserProfile() {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return Stream.value(null);
+    return _usersRef.doc(uid).snapshots().map((doc) => doc.data());
+  }
+
   /// Stream real-time matches from Firestore.
   /// Returns all users except the current user, converted to MockMatch objects.
   static Stream<List<MockMatch>> streamMatches({

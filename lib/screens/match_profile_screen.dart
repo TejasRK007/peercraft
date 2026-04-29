@@ -18,9 +18,6 @@ class MatchProfileScreen extends StatefulWidget {
 }
 
 class _MatchProfileScreenState extends State<MatchProfileScreen> {
-  final _sessionTypes = const ['1:1', 'Group'];
-  String _selectedSessionType = '1:1';
-
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
 
@@ -131,19 +128,6 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
                         const SizedBox(height: 22),
 
                         Text(
-                          'Expertise & Experience',
-                          style: AppTheme.headingSmall.copyWith(fontSize: 18),
-                        ),
-                        const SizedBox(height: 10),
-                        _SkillLevelBreakdown(skillLevel: match.user.skillLevel),
-                        const SizedBox(height: 12),
-                        _ExperienceGraph(
-                          experienceYears: match.user.experienceYears,
-                          avatarColor: match.user.avatarColor,
-                        ),
-                        const SizedBox(height: 22),
-
-                        Text(
                           'Platform Stats',
                           style: AppTheme.headingSmall.copyWith(fontSize: 18),
                         ),
@@ -167,14 +151,6 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
                           style: AppTheme.headingSmall.copyWith(fontSize: 18),
                         ),
                         const SizedBox(height: 10),
-
-                        _SessionTypePicker(
-                          value: _selectedSessionType,
-                          options: _sessionTypes,
-                          onChanged: (v) =>
-                              setState(() => _selectedSessionType = v),
-                        ),
-                        const SizedBox(height: 14),
 
                         // Date & Time pickers
                         Row(
@@ -278,7 +254,7 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
-                                    '$_formattedSlot • $_selectedSessionType',
+                                    _formattedSlot,
                                     style: AppTheme.labelStyle.copyWith(
                                       fontWeight: FontWeight.w800,
                                       color: AppTheme.deepPurple,
@@ -300,7 +276,7 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
                     if (!_hasSchedule || !mounted) return;
                     final messenger = ScaffoldMessenger.of(context);
                     final slot = _formattedSlot;
-                    final sType = _selectedSessionType;
+                    final sType = '1:1';
                     try {
                       await SessionService.sendRequest(
                         toUid: match.user.uid,
@@ -714,81 +690,6 @@ class _MatchPercentAnimated extends StatelessWidget {
   }
 }
 
-class _SessionTypePicker extends StatelessWidget {
-  final String value;
-  final List<String> options;
-  final ValueChanged<String> onChanged;
-
-  const _SessionTypePicker({
-    required this.value,
-    required this.options,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Session Type',
-          style: AppTheme.labelStyle.copyWith(
-            fontWeight: FontWeight.w900,
-            color: AppTheme.textMuted,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: options.map((t) {
-            final selected = t == value;
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => onChanged(t),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 240),
-                  height: 46,
-                  margin: EdgeInsets.only(
-                    right: t == options.first ? 10 : 0,
-                    left: t == options.last ? 10 : 0,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: selected ? AppTheme.buttonGradient : null,
-                    color: selected ? null : Colors.white.withAlpha(230),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: selected
-                          ? Colors.transparent
-                          : AppTheme.primaryPurple.withAlpha(90),
-                      width: 1.2,
-                    ),
-                    boxShadow: selected
-                        ? [
-                            BoxShadow(
-                              color: AppTheme.primaryPurple.withAlpha(60),
-                              blurRadius: 18,
-                              offset: const Offset(0, 12),
-                            )
-                          ]
-                        : [],
-                  ),
-                  child: Center(
-                    child: Text(
-                      t,
-                      style: AppTheme.labelStyle.copyWith(
-                        color: selected ? Colors.white : AppTheme.textMuted,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-}
 
 class _BottomActions extends StatelessWidget {
   final bool canSend;
@@ -861,116 +762,6 @@ class _BottomActions extends StatelessWidget {
   }
 }
 
-class _SkillLevelBreakdown extends StatelessWidget {
-  final String skillLevel;
-  const _SkillLevelBreakdown({required this.skillLevel});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withAlpha(230),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.black.withAlpha(10), width: 1),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryPurple.withAlpha(20),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.leaderboard_rounded, color: AppTheme.primaryPurple, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Skill Level',
-                  style: AppTheme.labelStyle.copyWith(
-                    color: AppTheme.textMuted,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  skillLevel,
-                  style: AppTheme.headingSmall.copyWith(fontSize: 16),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ExperienceGraph extends StatelessWidget {
-  final int experienceYears;
-  final Color avatarColor;
-  
-  const _ExperienceGraph({required this.experienceYears, required this.avatarColor});
-
-  @override
-  Widget build(BuildContext context) {
-    final int maxYears = 10;
-    final int displayBars = 10;
-    final int activeBars = ((experienceYears / maxYears) * displayBars).clamp(1, displayBars).round();
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white.withAlpha(230),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.black.withAlpha(10), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Experience',
-                style: AppTheme.labelStyle.copyWith(
-                  color: AppTheme.textMuted,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                '$experienceYears+ Years',
-                style: AppTheme.labelStyle.copyWith(
-                  color: Colors.black87,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(displayBars, (index) {
-              final isActive = index < activeBars;
-              return Container(
-                width: 20,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: isActive ? avatarColor : Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              );
-            }),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _SessionHistory extends StatelessWidget {
   final int sessionsCompleted;

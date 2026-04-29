@@ -4,11 +4,13 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../app_theme.dart';
+import '../models/intent_mode.dart';
 import '../services/session_service.dart';
 import 'video_call_screen.dart';
 
 class SessionRequestsScreen extends StatefulWidget {
-  const SessionRequestsScreen({super.key});
+  final IntentMode intent;
+  const SessionRequestsScreen({super.key, required this.intent});
 
   @override
   State<SessionRequestsScreen> createState() => _SessionRequestsScreenState();
@@ -80,59 +82,76 @@ class _SessionRequestsScreenState extends State<SessionRequestsScreen>
                   ),
                 ),
 
-                // Tab bar
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 24),
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(180),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(8),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
+                // Conditional UI based on IntentMode
+                if (widget.intent == IntentMode.teach)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 14),
+                      child: _IncomingTab(),
+                    ),
+                  )
+                else if (widget.intent == IntentMode.learn)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 14),
+                      child: _SentTab(),
+                    ),
+                  )
+                else ...[
+                  // Tab bar (only when intent is Both)
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 24),
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(180),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(8),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: TabBar(
+                      controller: _tabController,
+                      indicator: BoxDecoration(
+                        gradient: AppTheme.buttonGradient,
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                    ],
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      dividerColor: Colors.transparent,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: AppTheme.textMuted,
+                      labelStyle: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13.5,
+                      ),
+                      unselectedLabelStyle: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13.5,
+                      ),
+                      tabs: const [
+                        Tab(text: 'Incoming'),
+                        Tab(text: 'Sent'),
+                      ],
+                    ),
                   ),
-                  child: TabBar(
-                    controller: _tabController,
-                    indicator: BoxDecoration(
-                      gradient: AppTheme.buttonGradient,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    dividerColor: Colors.transparent,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: AppTheme.textMuted,
-                    labelStyle: const TextStyle(
-                      fontFamily: 'Outfit',
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13.5,
-                    ),
-                    unselectedLabelStyle: const TextStyle(
-                      fontFamily: 'Outfit',
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13.5,
-                    ),
-                    tabs: const [
-                      Tab(text: 'Incoming'),
-                      Tab(text: 'Sent'),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
+                  const SizedBox(height: 14),
 
-                // Tab content
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _IncomingTab(),
-                      _SentTab(),
-                    ],
+                  // Tab content
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _IncomingTab(),
+                        _SentTab(),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -465,6 +484,7 @@ class _RequestCard extends StatelessWidget {
                       builder: (_) => VideoCallScreen(
                         channelName: request.channelName,
                         peerName: _peerName,
+                        teacherUid: request.teacherUid,
                         isTeacher: FirebaseAuth.instance.currentUser?.uid ==
                             request.teacherUid,
                       ),
