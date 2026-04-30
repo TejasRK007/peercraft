@@ -65,14 +65,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withAlpha(14),
+                              color: AppTheme.bluePurple.withAlpha(14),
                               blurRadius: 10,
                               offset: const Offset(0, 3),
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.arrow_back_rounded,
-                            color: AppTheme.deepPurple, size: 20),
+                        child: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: AppTheme.deepPurple,
+                          size: 20,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -103,7 +106,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(
                         child: CircularProgressIndicator(
-                            color: AppTheme.primaryPurple),
+                          color: AppTheme.primaryPurple,
+                        ),
                       );
                     }
 
@@ -114,14 +118,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.notifications_none_rounded,
-                                size: 56,
-                                color: AppTheme.textMuted.withAlpha(80)),
+                            Icon(
+                              Icons.notifications_none_rounded,
+                              size: 56,
+                              color: AppTheme.textMuted.withAlpha(80),
+                            ),
                             const SizedBox(height: 14),
                             Text(
                               'No notifications yet',
-                              style: AppTheme.subtitleStyle
-                                  .copyWith(color: AppTheme.textMuted),
+                              style: AppTheme.subtitleStyle.copyWith(
+                                color: AppTheme.textMuted,
+                              ),
                             ),
                           ],
                         ),
@@ -184,8 +191,7 @@ class _NotifCardState extends State<_NotifCard> {
   void initState() {
     super.initState();
     // Resolve the real sender name — fixes old records where title was ''
-    _nameFuture =
-        _resolveSenderName(widget.notif.senderId, widget.notif.title);
+    _nameFuture = _resolveSenderName(widget.notif.senderId, widget.notif.title);
   }
 
   @override
@@ -203,7 +209,7 @@ class _NotifCardState extends State<_NotifCard> {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: isUnread
-                  ? AppTheme.primaryPurple.withAlpha(10)
+                  ? AppTheme.bluePurple.withAlpha(10)
                   : Colors.white,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
@@ -214,7 +220,7 @@ class _NotifCardState extends State<_NotifCard> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withAlpha(6),
+                  color: AppTheme.bluePurple.withAlpha(8),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -243,8 +249,11 @@ class _NotifCardState extends State<_NotifCard> {
                               color: AppTheme.primaryPurple,
                             ),
                           )
-                        : const Icon(Icons.notifications_rounded,
-                            color: AppTheme.primaryPurple, size: 22),
+                        : const Icon(
+                            Icons.notifications_rounded,
+                            color: AppTheme.primaryPurple,
+                            size: 22,
+                          ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -261,9 +270,9 @@ class _NotifCardState extends State<_NotifCard> {
                               senderName.isNotEmpty
                                   ? senderName
                                   : (snap.connectionState ==
-                                          ConnectionState.done
-                                      ? widget.notif.body
-                                      : '…'),
+                                            ConnectionState.done
+                                        ? widget.notif.body
+                                        : '…'),
                               style: AppTheme.labelStyle.copyWith(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 14,
@@ -305,8 +314,11 @@ class _NotifCardState extends State<_NotifCard> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Icon(Icons.chevron_right_rounded,
-                    color: AppTheme.textMuted, size: 20),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppTheme.textMuted,
+                  size: 20,
+                ),
               ],
             ),
           ),

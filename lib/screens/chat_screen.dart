@@ -11,11 +11,7 @@ class ChatScreen extends StatefulWidget {
   final String peerId;
   final String peerName;
 
-  const ChatScreen({
-    super.key,
-    required this.peerId,
-    required this.peerName,
-  });
+  const ChatScreen({super.key, required this.peerId, required this.peerName});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -94,14 +90,17 @@ class _ChatScreenState extends State<ChatScreen> {
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withAlpha(14),
+                              color: AppTheme.bluePurple.withAlpha(14),
                               blurRadius: 10,
                               offset: const Offset(0, 3),
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.arrow_back_rounded,
-                            color: AppTheme.deepPurple, size: 20),
+                        child: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: AppTheme.deepPurple,
+                          size: 20,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -126,8 +125,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         children: [
                           Text(
                             widget.peerName,
-                            style: AppTheme.headingSmall
-                                .copyWith(fontSize: 17),
+                            style: AppTheme.headingSmall.copyWith(fontSize: 17),
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
@@ -147,11 +145,9 @@ class _ChatScreenState extends State<ChatScreen> {
               // ── Messages ─────────────────────────────────────────────
               Expanded(
                 child: StreamBuilder<List<ChatMsg>>(
-                  stream:
-                      ChatService.instance.streamMessages(widget.peerId),
+                  stream: ChatService.instance.streamMessages(widget.peerId),
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState ==
-                        ConnectionState.waiting) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(
                         child: CircularProgressIndicator(
                           color: AppTheme.primaryPurple,
@@ -166,14 +162,17 @@ class _ChatScreenState extends State<ChatScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.chat_bubble_outline_rounded,
-                                size: 48,
-                                color: AppTheme.textMuted.withAlpha(100)),
+                            Icon(
+                              Icons.chat_bubble_outline_rounded,
+                              size: 48,
+                              color: AppTheme.textMuted.withAlpha(100),
+                            ),
                             const SizedBox(height: 12),
                             Text(
                               'Say hello to ${widget.peerName}!',
-                              style: AppTheme.labelStyle
-                                  .copyWith(color: AppTheme.textMuted),
+                              style: AppTheme.labelStyle.copyWith(
+                                color: AppTheme.textMuted,
+                              ),
                             ),
                           ],
                         ),
@@ -195,8 +194,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       controller: _scrollController,
                       padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
                       itemCount: messages.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(height: 8),
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final msg = messages[index];
                         return _MessageBubble(msg: msg);
@@ -212,11 +210,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(225),
+                    color: AppTheme.bluePurple.withAlpha(225),
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withAlpha(10),
+                        color: AppTheme.bluePurple.withAlpha(10),
                         blurRadius: 20,
                         offset: const Offset(0, 8),
                       ),
@@ -236,11 +234,14 @@ class _ChatScreenState extends State<ChatScreen> {
                           ),
                           decoration: InputDecoration(
                             hintText: 'Message ${widget.peerName}...',
-                            hintStyle: AppTheme.labelStyle
-                                .copyWith(fontSize: 13),
+                            hintStyle: AppTheme.labelStyle.copyWith(
+                              fontSize: 13,
+                            ),
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 14),
+                              horizontal: 10,
+                              vertical: 14,
+                            ),
                           ),
                         ),
                       ),
@@ -289,10 +290,9 @@ class _MessageBubble extends StatelessWidget {
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.72,
         ),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isMe ? AppTheme.primaryPurple : Colors.white,
+          color: isMe ? AppTheme.primaryPurple : AppTheme.bluePurple,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(18),
             topRight: const Radius.circular(18),
@@ -301,7 +301,7 @@ class _MessageBubble extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: (isMe ? AppTheme.primaryPurple : Colors.black)
+              color: (isMe ? AppTheme.primaryPurple : AppTheme.bluePurple)
                   .withAlpha(isMe ? 30 : 8),
               blurRadius: 10,
               offset: const Offset(0, 4),
@@ -309,8 +309,9 @@ class _MessageBubble extends StatelessWidget {
           ],
         ),
         child: Column(
-          crossAxisAlignment:
-              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: isMe
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             Text(
               msg.text,
@@ -327,8 +328,9 @@ class _MessageBubble extends StatelessWidget {
               style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 10,
-                color:
-                    isMe ? Colors.white.withAlpha(170) : AppTheme.textMuted,
+                color: isMe
+                    ? Colors.white.withAlpha(170)
+                    : AppTheme.bluePurple.withAlpha(170),
               ),
             ),
           ],

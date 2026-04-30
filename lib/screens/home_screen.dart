@@ -91,22 +91,28 @@ class _HomeScreenState extends State<HomeScreen> {
     _matchSub?.cancel();
 
     // Subscribe to real-time Firestore matches
-    _matchSub = FirestoreService.streamMatches(
-      intent: _currentIntent,
-      selectedSkills: widget.selectedSkills,
-    ).listen((firestoreMatches) {
-      if (!mounted) return;
-      setState(() {
-        _matches = firestoreMatches;
-        _isLoading = false;
-      });
-    }, onError: (_) {
-      if (!mounted) return;
-      setState(() {
-        _matches = [];
-        _isLoading = false;
-      });
-    });
+    _matchSub =
+        FirestoreService.streamMatches(
+          intent: _currentIntent,
+          selectedSkills: widget.selectedSkills,
+          skillsToLearn: widget.skillsToLearn,
+          skillsToTeach: widget.skillsToTeach,
+        ).listen(
+          (firestoreMatches) {
+            if (!mounted) return;
+            setState(() {
+              _matches = firestoreMatches;
+              _isLoading = false;
+            });
+          },
+          onError: (_) {
+            if (!mounted) return;
+            setState(() {
+              _matches = [];
+              _isLoading = false;
+            });
+          },
+        );
   }
 
   @override
@@ -118,21 +124,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppTheme.deepPurple,
-      ),
+      SnackBar(content: Text(message), backgroundColor: AppTheme.deepPurple),
     );
   }
 
   List<MockMatch> _filteredMatches() {
     if (_query.isEmpty) return _matches;
     return _matches
-        .where((m) =>
-            m.user.name.toLowerCase().contains(_query) ||
-            m.matchSkill.toLowerCase().contains(_query) ||
-            m.tag.toLowerCase().contains(_query) ||
-            m.matchReason.toLowerCase().contains(_query))
+        .where(
+          (m) =>
+              m.user.name.toLowerCase().contains(_query) ||
+              m.matchSkill.toLowerCase().contains(_query) ||
+              m.tag.toLowerCase().contains(_query) ||
+              m.matchReason.toLowerCase().contains(_query),
+        )
         .toList(growable: false);
   }
 
@@ -145,15 +150,16 @@ class _HomeScreenState extends State<HomeScreen> {
           return FadeTransition(
             opacity: animation,
             child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.06),
-                end: Offset.zero,
-              ).animate(
-                CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeOutCubic,
-                ),
-              ),
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(0, 0.06),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutCubic,
+                    ),
+                  ),
               child: child,
             ),
           );
@@ -190,8 +196,9 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               width: double.infinity,
               height: double.infinity,
-              decoration:
-                  const BoxDecoration(gradient: AppTheme.backgroundGradient),
+              decoration: const BoxDecoration(
+                gradient: AppTheme.backgroundGradient,
+              ),
               child: SafeArea(
                 top: true,
                 child: IndexedStack(
@@ -301,7 +308,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+                child: const Icon(
+                  Icons.add_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
               ),
               label: 'Add Skill',
             ),
@@ -362,7 +373,7 @@ class _LoadingOverlay extends StatelessWidget {
                     'Using real-time Firestore data.',
                     textAlign: TextAlign.center,
                     style: AppTheme.subtitleStyle,
-                  )
+                  ),
                 ],
               ),
             ),
@@ -404,15 +415,24 @@ class _HomeTab extends StatelessWidget {
 
   (String label, String subtitle, List<MockMatch> matches) _sectionData() {
     if (intent == IntentMode.learn) {
-      return ('Find mentors to learn from', 'People who can teach you', learnFromThem);
+      return (
+        'Find mentors to learn from',
+        'People who can teach you',
+        learnFromThem,
+      );
     }
     if (intent == IntentMode.teach) {
-      return ('Students looking to learn from you', 'People who want to learn from you', teachThem);
+      return (
+        'Students looking to learn from you',
+        'People who want to learn from you',
+        teachThem,
+      );
     }
-    return ('Recommended Matches', 'Learn from them and teach them', [
-      ...learnFromThem,
-      ...teachThem,
-    ]);
+    return (
+      'Recommended Matches',
+      'Learn from them and teach them',
+      [...learnFromThem, ...teachThem],
+    );
   }
 
   @override
@@ -529,37 +549,57 @@ class _SkillLevelChips extends StatelessWidget {
 
   static Color _levelColor(String? level) {
     switch (level) {
-      case 'Advanced': return const Color(0xFF4CAF50);
-      case 'Medium':   return const Color(0xFF2196F3);
-      case 'Beginner': return const Color(0xFFFF9800);
-      default:         return AppTheme.primaryPurple;
+      case 'Advanced':
+        return const Color(0xFF4CAF50);
+      case 'Medium':
+        return const Color(0xFF2196F3);
+      case 'Beginner':
+        return const Color(0xFFFF9800);
+      default:
+        return AppTheme.primaryPurple;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (skills.isEmpty) {
-      return Text('No skills added yet.',
-          style: AppTheme.labelStyle.copyWith(color: AppTheme.textMuted));
+      return Text(
+        'No skills added yet.',
+        style: AppTheme.labelStyle.copyWith(color: AppTheme.textMuted),
+      );
     }
     if (!isTeachSkills) {
       // Learn skills — plain chips, no levels
-      return Wrap(spacing: 8, runSpacing: 8, children: skills.map((s) {
-        return Chip(
-          label: Text(s, style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600)),
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-            side: BorderSide(color: AppTheme.primaryPurple.withAlpha(110), width: 1),
-          ),
-        );
-      }).toList());
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: skills.map((s) {
+          return Chip(
+            label: Text(
+              s,
+              style: const TextStyle(
+                fontFamily: 'Outfit',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: BorderSide(
+                color: AppTheme.primaryPurple.withAlpha(110),
+                width: 1,
+              ),
+            ),
+          );
+        }).toList(),
+      );
     }
 
     return StreamBuilder<Map<String, dynamic>?>(
       stream: FirestoreService.streamCurrentUserProfile(),
       builder: (context, snapshot) {
-        final levelMap = (snapshot.data?['skillLevels'] as Map<String, dynamic>?) ?? {};
+        final levelMap =
+            (snapshot.data?['skillLevels'] as Map<String, dynamic>?) ?? {};
         return Wrap(
           spacing: 10,
           runSpacing: 12,
@@ -571,26 +611,50 @@ class _SkillLevelChips extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: color.withAlpha(130), width: 1.5),
-                    boxShadow: [BoxShadow(color: color.withAlpha(20), blurRadius: 8, offset: const Offset(0, 3))],
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withAlpha(20),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
-                  child: Text(s, style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, color: AppTheme.textDark)),
+                  child: Text(
+                    s,
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
                 ),
                 if (level != null) ...[
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: color.withAlpha(20),
                       borderRadius: BorderRadius.circular(50),
                     ),
                     child: Text(
                       level,
-                      style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w800, fontSize: 11, color: color),
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11,
+                        color: color,
+                      ),
                     ),
                   ),
                 ],
@@ -695,7 +759,8 @@ class _TeacherRatingGraph extends StatelessWidget {
           return const SizedBox(
             height: 200,
             child: Center(
-                child: CircularProgressIndicator(color: AppTheme.primaryPurple)),
+              child: CircularProgressIndicator(color: AppTheme.primaryPurple),
+            ),
           );
         }
 
@@ -709,8 +774,9 @@ class _TeacherRatingGraph extends StatelessWidget {
         }
 
         // Limit to last 10 ratings for graph clarity
-        final displayHistory =
-            history.length > 10 ? history.sublist(history.length - 10) : history;
+        final displayHistory = history.length > 10
+            ? history.sublist(history.length - 10)
+            : history;
 
         final spots = List.generate(
           displayHistory.length,
@@ -724,7 +790,7 @@ class _TeacherRatingGraph extends StatelessWidget {
             borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(8),
+                color: AppTheme.bluePurple.withAlpha(8),
                 blurRadius: 18,
                 offset: const Offset(0, 10),
               ),
@@ -741,8 +807,10 @@ class _TeacherRatingGraph extends StatelessWidget {
                     style: AppTheme.headingSmall.copyWith(fontSize: 18),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryPurple.withAlpha(20),
                       borderRadius: BorderRadius.circular(12),
@@ -750,8 +818,11 @@ class _TeacherRatingGraph extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.star_rounded,
-                            color: Color(0xFFFFC857), size: 16),
+                        const Icon(
+                          Icons.star_rounded,
+                          color: Color(0xFFFFC857),
+                          size: 16,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           (data['rating'] as num?)?.toStringAsFixed(1) ?? '4.5',
@@ -789,12 +860,15 @@ class _TeacherRatingGraph extends StatelessWidget {
                     ),
                     titlesData: FlTitlesData(
                       show: true,
-                      rightTitles:
-                          AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      topTitles:
-                          AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      bottomTitles:
-                          AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      topTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
                       leftTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
@@ -861,29 +935,35 @@ class _MatchCard extends StatelessWidget {
   final MockMatch match;
   final ValueChanged<MockMatch> onOpenMatchProfile;
 
-  const _MatchCard({
-    required this.match,
-    required this.onOpenMatchProfile,
-  });
+  const _MatchCard({required this.match, required this.onOpenMatchProfile});
+
+  /// Color based on match percentage
+  Color _matchColor(int pct) {
+    if (pct >= 75) return const Color(0xFF4CAF50); // green
+    if (pct >= 40) return const Color(0xFFFFB300); // amber
+    return const Color(0xFFFF5252); // red
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Generate experience progress bar visually (like ███████░░)
-    final double maxExp = 10.0;
-    final double expPercent = (match.user.experienceYears / maxExp).clamp(0.0, 1.0);
-    
+    final pct = match.matchScore.clamp(0, 100);
+    final accent = _matchColor(pct);
+
     return GestureDetector(
       onTap: () => onOpenMatchProfile(match),
       child: Container(
-        width: 300,
+        width: 295,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.black.withAlpha(15), width: 1),
+          border: Border.all(
+            color: AppTheme.bluePurple.withAlpha(15),
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(10),
+              color: AppTheme.bluePurple.withAlpha(10),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -892,13 +972,13 @@ class _MatchCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top Row: Avatar, Name, Rating
+            // ── Header: Avatar + Name + Match Ring ───────────────
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: match.user.avatarColor.withAlpha(220),
+                  backgroundColor: AppTheme.bluePurple,
                   child: Text(
                     initialsForName(match.user.name),
                     style: const TextStyle(
@@ -916,21 +996,33 @@ class _MatchCard extends StatelessWidget {
                     children: [
                       Text(
                         match.user.name,
-                        style: AppTheme.headingSmall.copyWith(fontSize: 17),
+                        style: AppTheme.headingSmall.copyWith(fontSize: 16),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       Row(
                         children: [
-                          const Icon(Icons.star_rounded, color: Color(0xFFFFC857), size: 14),
-                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.star_rounded,
+                            color: Color(0xFFFFC857),
+                            size: 13,
+                          ),
+                          const SizedBox(width: 3),
                           Text(
                             match.user.rating.toStringAsFixed(1),
                             style: AppTheme.labelStyle.copyWith(
-                              fontSize: 13,
+                              fontSize: 12,
                               color: AppTheme.textMuted,
                               fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '· ${match.user.sessionsCompleted} sessions',
+                            style: AppTheme.labelStyle.copyWith(
+                              fontSize: 11,
+                              color: AppTheme.textMuted,
                             ),
                           ),
                         ],
@@ -938,147 +1030,173 @@ class _MatchCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Match Score
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: match.user.avatarColor.withAlpha(20),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${match.matchScore}% Match',
-                    style: AppTheme.labelStyle.copyWith(
-                      color: match.user.avatarColor,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12,
-                    ),
+                // ── Match % Ring ─────────────────────────────────
+                SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 56,
+                        height: 56,
+                        child: CircularProgressIndicator(
+                          value: pct / 100,
+                          strokeWidth: 5,
+                          backgroundColor: accent.withAlpha(30),
+                          valueColor: AlwaysStoppedAnimation<Color>(accent),
+                        ),
+                      ),
+                      Text(
+                        '$pct%',
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                          color: accent,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            
-            // Skill Info
+            const SizedBox(height: 10),
+
+            // ── Match Reason Badge ───────────────────────────────
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: accent.withAlpha(18),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: accent.withAlpha(60)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    match.tag == 'Can Teach You'
+                        ? Icons.school_rounded
+                        : match.tag == 'Peer Match'
+                        ? Icons.sync_alt_rounded
+                        : Icons.lightbulb_rounded,
+                    size: 13,
+                    color: accent,
+                  ),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      match.matchReason,
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                        color: accent,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // ── Skill chips ──────────────────────────────────────
             Text(
-              match.tag == 'Can Teach You' 
-                  ? 'Teaches: ${match.user.skillsToTeach.join(', ')}'
-                  : 'Wants to learn: ${match.user.skillsToLearn.join(', ')}',
+              match.tag == 'Can Teach You'
+                  ? 'Teaches: ${match.user.skillsToTeach.take(3).join(', ')}'
+                  : 'Wants to learn: ${match.user.skillsToLearn.take(3).join(', ')}',
               style: AppTheme.labelStyle.copyWith(
-                fontSize: 13.5,
-                color: Colors.black87,
-                fontWeight: FontWeight.w700,
+                fontSize: 12.5,
+                color: AppTheme.textDark,
+                fontWeight: FontWeight.w600,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 12),
-            
-            // Level & Experience
+            const SizedBox(height: 10),
+
+            // ── Match % Bar ──────────────────────────────────────
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.blueGrey.withAlpha(20),
-                    borderRadius: BorderRadius.circular(8),
+                Text(
+                  'Match strength',
+                  style: AppTheme.labelStyle.copyWith(
+                    fontSize: 11,
+                    color: AppTheme.textMuted,
                   ),
-                  child: Text(
-                    match.user.skillLevel,
-                    style: AppTheme.labelStyle.copyWith(
-                      color: Colors.blueGrey.shade700,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 11,
-                    ),
+                ),
+                const Spacer(),
+                Text(
+                  _matchLabel(pct),
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11,
+                    color: accent,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            
-            Text(
-              'Skill Strength',
-              style: AppTheme.labelStyle.copyWith(
-                fontSize: 12,
-                color: AppTheme.textMuted,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 5),
             ClipRRect(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(6),
               child: LinearProgressIndicator(
-                value: expPercent,
-                minHeight: 6,
-                backgroundColor: Colors.grey.shade200,
-                valueColor: AlwaysStoppedAnimation<Color>(match.user.avatarColor),
+                value: pct / 100,
+                minHeight: 7,
+                backgroundColor: accent.withAlpha(20),
+                valueColor: AlwaysStoppedAnimation<Color>(accent),
               ),
             ),
-            const SizedBox(height: 16),
-            
-            // Extra Info
-            Wrap(
-              spacing: 12,
-              runSpacing: 4,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.work_outline_rounded, size: 14, color: AppTheme.textMuted),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${match.user.experienceYears} yrs exp',
-                      style: AppTheme.labelStyle.copyWith(fontSize: 12, color: AppTheme.textMuted),
-                    ),
-                  ],
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check_circle_outline_rounded, size: 14, color: AppTheme.textMuted),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${match.user.sessionsCompleted} sessions',
-                      style: AppTheme.labelStyle.copyWith(fontSize: 12, color: AppTheme.textMuted),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            
-            const Spacer(),
-            
-            // Buttons
+            const SizedBox(height: 14),
+
+            // ── Buttons ──────────────────────────────────────────
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => onOpenMatchProfile(match),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: match.user.avatarColor,
-                      side: BorderSide(color: match.user.avatarColor.withAlpha(100), width: 1.5),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      foregroundColor: AppTheme.textDark,
+                      side: BorderSide(
+                        color: AppTheme.bluePurple.withAlpha(40),
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
                     ),
                     child: const Text(
-                      'View Profile',
-                      style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 13),
+                      'Profile',
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () => onOpenMatchProfile(match),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: match.user.avatarColor,
+                      backgroundColor: AppTheme.bluePurple,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
                     ),
                     child: const Text(
                       'Connect',
-                      style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 13),
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ),
@@ -1089,9 +1207,14 @@ class _MatchCard extends StatelessWidget {
       ),
     );
   }
+
+  String _matchLabel(int pct) {
+    if (pct >= 75) return 'Excellent';
+    if (pct >= 50) return 'Good';
+    if (pct >= 25) return 'Partial';
+    return 'Low';
+  }
 }
-
-
 
 class _QuickActions extends StatelessWidget {
   final IntentMode intent;
@@ -1223,22 +1346,34 @@ class _FindMatchSheetState extends State<_FindMatchSheet> {
                     Row(
                       children: [
                         Container(
-                          width: 40, height: 40,
+                          width: 40,
+                          height: 40,
                           decoration: BoxDecoration(
                             color: AppTheme.primaryPurple.withAlpha(20),
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: const Icon(Icons.search_rounded,
-                              color: AppTheme.primaryPurple, size: 20),
+                          child: const Icon(
+                            Icons.search_rounded,
+                            color: AppTheme.primaryPurple,
+                            size: 20,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Find a Mentor',
-                                style: AppTheme.headingSmall.copyWith(fontSize: 20)),
-                            Text('Which skill do you want to learn today?',
-                                style: AppTheme.subtitleStyle.copyWith(fontSize: 12.5)),
+                            Text(
+                              'Find a Mentor',
+                              style: AppTheme.headingSmall.copyWith(
+                                fontSize: 20,
+                              ),
+                            ),
+                            Text(
+                              'Which skill do you want to learn today?',
+                              style: AppTheme.subtitleStyle.copyWith(
+                                fontSize: 12.5,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -1246,9 +1381,13 @@ class _FindMatchSheetState extends State<_FindMatchSheet> {
                     const SizedBox(height: 18),
 
                     // Skill chips
-                    Text('Your learning skills',
-                        style: AppTheme.labelStyle.copyWith(
-                            color: AppTheme.textMuted, fontWeight: FontWeight.w700)),
+                    Text(
+                      'Your learning skills',
+                      style: AppTheme.labelStyle.copyWith(
+                        color: AppTheme.textMuted,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
@@ -1258,13 +1397,15 @@ class _FindMatchSheetState extends State<_FindMatchSheet> {
                         return GestureDetector(
                           onTap: hasRealSkills
                               ? () => setState(() {
-                                    _selectedSkill = isSelected ? null : skill;
-                                  })
+                                  _selectedSkill = isSelected ? null : skill;
+                                })
                               : null,
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 9),
+                              horizontal: 16,
+                              vertical: 9,
+                            ),
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? AppTheme.primaryPurple
@@ -1281,8 +1422,11 @@ class _FindMatchSheetState extends State<_FindMatchSheet> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 if (isSelected) ...[
-                                  const Icon(Icons.check_rounded,
-                                      color: Colors.white, size: 14),
+                                  const Icon(
+                                    Icons.check_rounded,
+                                    color: Colors.white,
+                                    size: 14,
+                                  ),
                                   const SizedBox(width: 5),
                                 ],
                                 Text(
@@ -1311,12 +1455,16 @@ class _FindMatchSheetState extends State<_FindMatchSheet> {
                           Expanded(
                             child: Text(
                               'Mentors for \'$_selectedSkill\'',
-                              style: AppTheme.headingSmall.copyWith(fontSize: 16),
+                              style: AppTheme.headingSmall.copyWith(
+                                fontSize: 16,
+                              ),
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
                             decoration: BoxDecoration(
                               color: AppTheme.primaryPurple.withAlpha(14),
                               borderRadius: BorderRadius.circular(999),
@@ -1324,8 +1472,9 @@ class _FindMatchSheetState extends State<_FindMatchSheet> {
                             child: Text(
                               '${mentors.length} found',
                               style: AppTheme.labelStyle.copyWith(
-                                  color: AppTheme.primaryPurple,
-                                  fontWeight: FontWeight.w800),
+                                color: AppTheme.primaryPurple,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
                         ],
@@ -1343,54 +1492,63 @@ class _FindMatchSheetState extends State<_FindMatchSheet> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.touch_app_rounded,
-                                size: 48,
-                                color: AppTheme.primaryPurple.withAlpha(80)),
+                            Icon(
+                              Icons.touch_app_rounded,
+                              size: 48,
+                              color: AppTheme.primaryPurple.withAlpha(80),
+                            ),
                             const SizedBox(height: 12),
-                            Text('Tap a skill above to\nsee available mentors',
-                                textAlign: TextAlign.center,
-                                style: AppTheme.subtitleStyle),
+                            Text(
+                              'Tap a skill above to\nsee available mentors',
+                              textAlign: TextAlign.center,
+                              style: AppTheme.subtitleStyle,
+                            ),
                           ],
                         ),
                       )
                     : mentors.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.person_search_rounded,
-                                    size: 48,
-                                    color: AppTheme.primaryPurple.withAlpha(60)),
-                                const SizedBox(height: 12),
-                                Text(
-                                    'No mentors found for\n\'$_selectedSkill\' yet.',
-                                    textAlign: TextAlign.center,
-                                    style: AppTheme.subtitleStyle),
-                                const SizedBox(height: 8),
-                                Text('Check back later!',
-                                    style: AppTheme.labelStyle.copyWith(
-                                        color: AppTheme.textMuted)),
-                              ],
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.person_search_rounded,
+                              size: 48,
+                              color: AppTheme.primaryPurple.withAlpha(60),
                             ),
-                          )
-                        : ListView.separated(
-                            controller: scrollController,
-                            padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
-                            itemCount: mentors.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 10),
-                            itemBuilder: (context, i) {
-                              final m = mentors[i];
-                              return _MentorListTile(
-                                match: m,
-                                targetSkill: _selectedSkill!,
-                                onTap: () {
-                                  Navigator.of(context).pop();
-                                  widget.onOpenMatchProfile(m);
-                                },
-                              );
+                            const SizedBox(height: 12),
+                            Text(
+                              'No mentors found for\n\'$_selectedSkill\' yet.',
+                              textAlign: TextAlign.center,
+                              style: AppTheme.subtitleStyle,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Check back later!',
+                              style: AppTheme.labelStyle.copyWith(
+                                color: AppTheme.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.separated(
+                        controller: scrollController,
+                        padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
+                        itemCount: mentors.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (context, i) {
+                          final m = mentors[i];
+                          return _MentorListTile(
+                            match: m,
+                            targetSkill: _selectedSkill!,
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              widget.onOpenMatchProfile(m);
                             },
-                          ),
+                          );
+                        },
+                      ),
               ),
             ],
           ),
@@ -1422,12 +1580,16 @@ class _MentorListTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.black.withAlpha(12), width: 1),
+          border: Border.all(
+            color: AppTheme.bluePurple.withAlpha(12),
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withAlpha(8),
-                blurRadius: 14,
-                offset: const Offset(0, 5)),
+              color: AppTheme.bluePurple.withAlpha(8),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
+            ),
           ],
         ),
         child: Row(
@@ -1453,38 +1615,50 @@ class _MentorListTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(u.name,
-                      style: AppTheme.headingSmall.copyWith(fontSize: 15),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                  Text(
+                    u.name,
+                    style: AppTheme.headingSmall.copyWith(fontSize: 15),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      const Icon(Icons.star_rounded,
-                          color: Color(0xFFFFC857), size: 13),
+                      const Icon(
+                        Icons.star_rounded,
+                        color: Color(0xFFFFC857),
+                        size: 13,
+                      ),
                       const SizedBox(width: 3),
-                      Text(u.rating.toStringAsFixed(1),
-                          style: AppTheme.labelStyle.copyWith(
-                              fontSize: 12,
-                              color: AppTheme.textMuted,
-                              fontWeight: FontWeight.w700)),
+                      Text(
+                        u.rating.toStringAsFixed(1),
+                        style: AppTheme.labelStyle.copyWith(
+                          fontSize: 12,
+                          color: AppTheme.textMuted,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       const SizedBox(width: 8),
                       Container(
                         width: 4,
                         height: 4,
                         decoration: const BoxDecoration(
-                            color: AppTheme.textMuted,
-                            shape: BoxShape.circle),
+                          color: AppTheme.textMuted,
+                          shape: BoxShape.circle,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text('${u.sessionsCompleted} sessions',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTheme.labelStyle.copyWith(
-                                fontSize: 12,
-                                color: AppTheme.textMuted,
-                                fontWeight: FontWeight.w700)),
+                        child: Text(
+                          '${u.sessionsCompleted} sessions',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTheme.labelStyle.copyWith(
+                            fontSize: 12,
+                            color: AppTheme.textMuted,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -1495,7 +1669,9 @@ class _MentorListTile extends StatelessWidget {
                       Flexible(
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: AppTheme.primaryPurple.withAlpha(18),
                             borderRadius: BorderRadius.circular(999),
@@ -1524,7 +1700,9 @@ class _MentorListTile extends StatelessWidget {
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 9, vertical: 5),
+                    horizontal: 9,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: u.avatarColor.withAlpha(20),
                     borderRadius: BorderRadius.circular(10),
@@ -1540,8 +1718,11 @@ class _MentorListTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Icon(Icons.arrow_forward_ios_rounded,
-                    size: 14, color: AppTheme.textMuted),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: AppTheme.textMuted,
+                ),
               ],
             ),
           ],
@@ -1577,7 +1758,7 @@ class _ActionButton extends StatelessWidget {
               color: AppTheme.primaryPurple.withAlpha(35),
               blurRadius: 18,
               offset: const Offset(0, 10),
-            )
+            ),
           ],
         ),
         child: Row(
@@ -1587,10 +1768,8 @@ class _ActionButton extends StatelessWidget {
             const SizedBox(width: 10),
             Text(
               label,
-              style: AppTheme.buttonTextStyle.copyWith(
-                fontSize: 14.5,
-              ),
-            )
+              style: AppTheme.buttonTextStyle.copyWith(fontSize: 14.5),
+            ),
           ],
         ),
       ),
@@ -1607,11 +1786,34 @@ class _Greeting extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(
-          'Hey 👋',
-          style: AppTheme.headlineStyle.copyWith(fontSize: 30),
+        Expanded(
+          child: StreamBuilder<Map<String, dynamic>?>(
+            stream: FirestoreService.streamCurrentUserProfile(),
+            builder: (context, snapshot) {
+              final data = snapshot.data ?? {};
+              final authName =
+                  FirebaseAuth.instance.currentUser?.displayName ?? '';
+              final dbName = data['name'] as String? ?? '';
+              final name = authName.trim().isNotEmpty
+                  ? authName
+                  : (dbName.trim().isNotEmpty ? dbName : 'there');
+
+              // Only take the first name
+              final firstName = name.split(' ').first;
+
+              return Text(
+                'Hey, $firstName 👋',
+                style: AppTheme.headlineStyle.copyWith(
+                  fontSize: 30,
+                  color: AppTheme.primaryPurple, // Purple lavender color
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              );
+            },
+          ),
         ),
-        const Spacer(),
+
         // Bell icon — badge combines session requests + chat notifications
         StreamBuilder<int>(
           stream: ChatService.instance.streamUnreadNotificationCount(),
@@ -1625,24 +1827,26 @@ class _Greeting extends StatelessWidget {
                   onTap: () {
                     Navigator.of(context).push(
                       PageRouteBuilder(
-                        transitionDuration:
-                            const Duration(milliseconds: 380),
+                        transitionDuration: const Duration(milliseconds: 380),
                         pageBuilder: (_, __, ___) =>
                             const NotificationsScreen(),
-                        transitionsBuilder:
-                            (_, animation, __, child) => FadeTransition(
-                          opacity: animation,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0, 0.06),
-                              end: Offset.zero,
-                            ).animate(CurvedAnimation(
-                              parent: animation,
-                              curve: Curves.easeOutCubic,
-                            )),
-                            child: child,
-                          ),
-                        ),
+                        transitionsBuilder: (_, animation, __, child) =>
+                            FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position:
+                                    Tween<Offset>(
+                                      begin: const Offset(0, 0.06),
+                                      end: Offset.zero,
+                                    ).animate(
+                                      CurvedAnimation(
+                                        parent: animation,
+                                        curve: Curves.easeOutCubic,
+                                      ),
+                                    ),
+                                child: child,
+                              ),
+                            ),
                       ),
                     );
                   },
@@ -1654,7 +1858,7 @@ class _Greeting extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withAlpha(10),
+                          color: AppTheme.bluePurple.withAlpha(10),
                           blurRadius: 10,
                           offset: const Offset(0, 3),
                         ),
@@ -1746,7 +1950,7 @@ class _SearchBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(8),
+            color: AppTheme.bluePurple.withAlpha(8),
             blurRadius: 16,
             offset: const Offset(0, 10),
           ),
@@ -1759,8 +1963,10 @@ class _SearchBar extends StatelessWidget {
           hintText: 'Search skills or people',
           hintStyle: AppTheme.labelStyle.copyWith(fontSize: 13),
           border: InputBorder.none,
-          prefixIcon:
-              const Icon(Icons.search_rounded, color: AppTheme.primaryPurple),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: AppTheme.primaryPurple,
+          ),
           suffixIcon: controller.text.isEmpty
               ? null
               : GestureDetector(
@@ -1768,14 +1974,17 @@ class _SearchBar extends StatelessWidget {
                     controller.clear();
                     FocusScope.of(context).unfocus();
                   },
-                  child: const Icon(Icons.close_rounded,
-                      color: AppTheme.textMuted),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    color: AppTheme.textMuted,
+                  ),
                 ),
         ),
       ),
     );
   }
 }
+
 class _MatchesTab extends StatelessWidget {
   final List<MockMatch> matches;
   final ValueChanged<MockMatch> onOpenMatchProfile;
@@ -1801,10 +2010,7 @@ class _MatchesTab extends StatelessWidget {
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final m = matches[index];
-            return _MatchRowCard(
-              match: m,
-              onOpen: () => onOpenMatchProfile(m),
-            );
+            return _MatchRowCard(match: m, onOpen: () => onOpenMatchProfile(m));
           },
         ),
       ),
@@ -1816,10 +2022,7 @@ class _MatchRowCard extends StatelessWidget {
   final MockMatch match;
   final VoidCallback onOpen;
 
-  const _MatchRowCard({
-    required this.match,
-    required this.onOpen,
-  });
+  const _MatchRowCard({required this.match, required this.onOpen});
 
   @override
   Widget build(BuildContext context) {
@@ -1832,7 +2035,7 @@ class _MatchRowCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(22),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(9),
+              color: AppTheme.bluePurple.withAlpha(9),
               blurRadius: 18,
               offset: const Offset(0, 14),
             ),
@@ -1911,10 +2114,9 @@ class _MatchRowCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Icon(Icons.chevron_right_rounded,
-                    color: AppTheme.textMuted),
+                Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted),
               ],
-            )
+            ),
           ],
         ),
       ),
@@ -1946,13 +2148,19 @@ class _HistoryTab extends StatelessWidget {
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
-                    child: CircularProgressIndicator(color: AppTheme.primaryPurple),
+                    child: CircularProgressIndicator(
+                      color: AppTheme.primaryPurple,
+                    ),
                   );
                 }
                 if (snapshot.hasError) {
                   return Center(
-                    child: Text('Error: ${snapshot.error}',
-                        style: AppTheme.subtitleStyle.copyWith(color: Colors.redAccent)),
+                    child: Text(
+                      'Error: ${snapshot.error}',
+                      style: AppTheme.subtitleStyle.copyWith(
+                        color: Colors.redAccent,
+                      ),
+                    ),
                   );
                 }
                 final requests = snapshot.data ?? [];
@@ -1961,9 +2169,16 @@ class _HistoryTab extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.history_rounded, size: 48, color: AppTheme.textMuted.withAlpha(120)),
+                        Icon(
+                          Icons.history_rounded,
+                          size: 48,
+                          color: AppTheme.textMuted.withAlpha(120),
+                        ),
                         const SizedBox(height: 12),
-                        Text('No activity history yet', style: AppTheme.subtitleStyle),
+                        Text(
+                          'No activity history yet',
+                          style: AppTheme.subtitleStyle,
+                        ),
                       ],
                     ),
                   );
@@ -2014,19 +2229,27 @@ class _SessionRequestCardState extends State<_SessionRequestCard> {
 
   Color get _statusColor {
     switch (widget.request.status) {
-      case 'pending': return const Color(0xFFFFB347);
-      case 'accepted': return const Color(0xFF4CAF50);
-      case 'rejected': return Colors.redAccent;
-      default: return AppTheme.textMuted;
+      case 'pending':
+        return const Color(0xFFFFB347);
+      case 'accepted':
+        return const Color(0xFF4CAF50);
+      case 'rejected':
+        return Colors.redAccent;
+      default:
+        return AppTheme.textMuted;
     }
   }
 
   IconData get _statusIcon {
     switch (widget.request.status) {
-      case 'pending': return Icons.schedule_rounded;
-      case 'accepted': return Icons.check_circle_rounded;
-      case 'rejected': return Icons.cancel_rounded;
-      default: return Icons.help_outline_rounded;
+      case 'pending':
+        return Icons.schedule_rounded;
+      case 'accepted':
+        return Icons.check_circle_rounded;
+      case 'rejected':
+        return Icons.cancel_rounded;
+      default:
+        return Icons.help_outline_rounded;
     }
   }
 
@@ -2044,7 +2267,7 @@ class _SessionRequestCardState extends State<_SessionRequestCard> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(8),
+                color: AppTheme.bluePurple.withAlpha(8),
                 blurRadius: 14,
                 offset: const Offset(0, 6),
               ),
@@ -2062,8 +2285,10 @@ class _SessionRequestCardState extends State<_SessionRequestCard> {
                     child: Text(
                       peerName.isNotEmpty ? peerName[0].toUpperCase() : '?',
                       style: const TextStyle(
-                        fontFamily: 'Outfit', fontWeight: FontWeight.w900,
-                        fontSize: 16, color: Colors.white,
+                        fontFamily: 'Outfit',
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        color: Colors.white,
                       ),
                     ),
                   ),
@@ -2072,16 +2297,27 @@ class _SessionRequestCardState extends State<_SessionRequestCard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(peerName.isNotEmpty ? peerName : '…', style: AppTheme.headingSmall.copyWith(fontSize: 15)),
                         Text(
-                          widget.isIncoming ? 'wants to connect' : 'request sent',
-                          style: AppTheme.labelStyle.copyWith(color: AppTheme.textMuted, fontSize: 11),
+                          peerName.isNotEmpty ? peerName : '…',
+                          style: AppTheme.headingSmall.copyWith(fontSize: 15),
+                        ),
+                        Text(
+                          widget.isIncoming
+                              ? 'wants to connect'
+                              : 'request sent',
+                          style: AppTheme.labelStyle.copyWith(
+                            color: AppTheme.textMuted,
+                            fontSize: 11,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _statusColor.withAlpha(20),
                       borderRadius: BorderRadius.circular(10),
@@ -2093,10 +2329,13 @@ class _SessionRequestCardState extends State<_SessionRequestCard> {
                         Icon(_statusIcon, size: 12, color: _statusColor),
                         const SizedBox(width: 4),
                         Text(
-                          widget.request.status[0].toUpperCase() + widget.request.status.substring(1),
+                          widget.request.status[0].toUpperCase() +
+                              widget.request.status.substring(1),
                           style: TextStyle(
-                            fontFamily: 'Outfit', fontWeight: FontWeight.w800,
-                            fontSize: 10, color: _statusColor,
+                            fontFamily: 'Outfit',
+                            fontWeight: FontWeight.w800,
+                            fontSize: 10,
+                            color: _statusColor,
                           ),
                         ),
                       ],
@@ -2104,85 +2343,106 @@ class _SessionRequestCardState extends State<_SessionRequestCard> {
                   ),
                 ],
               ),
-          const SizedBox(height: 10),
-          // Info row
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              _chip(Icons.auto_awesome_rounded, widget.request.skill),
-              _chip(Icons.schedule_rounded, widget.request.slot),
-              _chip(Icons.people_rounded, widget.request.sessionType),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // Actions
-          if (widget.isIncoming && widget.request.status == 'pending')
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => SessionService.acceptRequest(widget.request.id),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4CAF50),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      textStyle: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w800, fontSize: 13),
-                    ),
-                    child: const Text('Accept'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => SessionService.rejectRequest(widget.request.id),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.redAccent,
-                      side: const BorderSide(color: Colors.redAccent),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      textStyle: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w800, fontSize: 13),
-                    ),
-                    child: const Text('Reject'),
-                  ),
-                ),
-              ],
-            ),
-          if (widget.request.status == 'accepted')
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => VideoCallScreen(
-                        channelName: widget.request.channelName,
-                        peerName: peerName,
-                        teacherUid: widget.request.teacherUid,
-                        skill: widget.request.skill,
-                        isTeacher: FirebaseAuth.instance.currentUser?.uid ==
-                            widget.request.teacherUid,
+              const SizedBox(height: 10),
+              // Info row
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _chip(Icons.auto_awesome_rounded, widget.request.skill),
+                  _chip(Icons.schedule_rounded, widget.request.slot),
+                  _chip(Icons.people_rounded, widget.request.sessionType),
+                ],
+              ),
+              const SizedBox(height: 10),
+              // Actions
+              if (widget.isIncoming && widget.request.status == 'pending')
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () =>
+                            SessionService.acceptRequest(widget.request.id),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4CAF50),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          textStyle: const TextStyle(
+                            fontFamily: 'Outfit',
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                          ),
+                        ),
+                        child: const Text('Accept'),
                       ),
                     ),
-                  );
-                },
-                icon: const Icon(Icons.videocam_rounded, size: 18),
-                label: const Text('Join Video Call'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryPurple,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  textStyle: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w900, fontSize: 13),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () =>
+                            SessionService.rejectRequest(widget.request.id),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.redAccent,
+                          side: const BorderSide(color: Colors.redAccent),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          textStyle: const TextStyle(
+                            fontFamily: 'Outfit',
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                          ),
+                        ),
+                        child: const Text('Reject'),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ),
-        ],
-      ),
-    );
+              if (widget.request.status == 'accepted')
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => VideoCallScreen(
+                            channelName: widget.request.channelName,
+                            peerName: peerName,
+                            teacherUid: widget.request.teacherUid,
+                            skill: widget.request.skill,
+                            isTeacher:
+                                FirebaseAuth.instance.currentUser?.uid ==
+                                widget.request.teacherUid,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.videocam_rounded, size: 18),
+                    label: const Text('Join Video Call'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryPurple,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      textStyle: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontWeight: FontWeight.w900,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
       }, // FutureBuilder builder
     ); // FutureBuilder
   }
@@ -2200,10 +2460,15 @@ class _SessionRequestCardState extends State<_SessionRequestCard> {
         children: [
           Icon(icon, size: 12, color: AppTheme.primaryPurple),
           const SizedBox(width: 4),
-          Text(text, style: const TextStyle(
-            fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 11,
-            color: AppTheme.deepPurple,
-          )),
+          Text(
+            text,
+            style: const TextStyle(
+              fontFamily: 'Outfit',
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+              color: AppTheme.deepPurple,
+            ),
+          ),
         ],
       ),
     );
@@ -2235,22 +2500,41 @@ class _ProfileTab extends StatelessWidget {
         builder: (context, snapshot) {
           final data = snapshot.data ?? {};
           final credits = (data['credits'] as num?)?.toInt() ?? 0;
-          final sessions = (data['sessionsCompleted'] as num?)?.toInt() ?? 1; // Fake 1 session for demo
+          final sessions =
+              (data['sessionsCompleted'] as num?)?.toInt() ??
+              1; // Fake 1 session for demo
           final rating = (data['rating'] as num?)?.toDouble() ?? 5.0;
-          final streak = (data['streak'] as num?)?.toInt() ?? 3; // Demo 3 day streak
+          final streak =
+              (data['streak'] as num?)?.toInt() ?? 3; // Demo 3 day streak
 
           // Compute Badges
           List<Map<String, dynamic>> badges = [
-            {'name': 'Early Adopter', 'icon': Icons.rocket_launch_rounded, 'color': const Color(0xFFFF9800)},
+            {
+              'name': 'Early Adopter',
+              'icon': Icons.rocket_launch_rounded,
+              'color': const Color(0xFFFF9800),
+            },
           ];
           if (sessions > 0) {
-            badges.add({'name': 'First Session', 'icon': Icons.handshake_rounded, 'color': const Color(0xFF4CAF50)});
+            badges.add({
+              'name': 'First Session',
+              'icon': Icons.handshake_rounded,
+              'color': const Color(0xFF4CAF50),
+            });
           }
           if (streak >= 3) {
-            badges.add({'name': 'On Fire', 'icon': Icons.local_fire_department_rounded, 'color': const Color(0xFFFF5252)});
+            badges.add({
+              'name': 'On Fire',
+              'icon': Icons.local_fire_department_rounded,
+              'color': const Color(0xFFFF5252),
+            });
           }
           if (credits >= 100) {
-            badges.add({'name': 'Credit King', 'icon': Icons.diamond_rounded, 'color': const Color(0xFF448AFF)});
+            badges.add({
+              'name': 'Credit King',
+              'icon': Icons.diamond_rounded,
+              'color': const Color(0xFF448AFF),
+            });
           }
 
           return ListView(
@@ -2261,14 +2545,14 @@ class _ProfileTab extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF2D1B69), Color(0xFF7C5CFC)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: AppTheme.bluePurple, // Blue-purple background
                   borderRadius: BorderRadius.circular(28),
                   boxShadow: [
-                    BoxShadow(color: const Color(0xFF7C5CFC).withAlpha(80), blurRadius: 24, offset: const Offset(0, 10)),
+                    BoxShadow(
+                      color: AppTheme.bluePurple.withAlpha(40),
+                      blurRadius: 24,
+                      offset: const Offset(0, 10),
+                    ),
                   ],
                 ),
                 child: Column(
@@ -2277,11 +2561,18 @@ class _ProfileTab extends StatelessWidget {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(3),
-                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
                           child: const CircleAvatar(
                             radius: 34,
                             backgroundColor: AppTheme.lightLavender,
-                            child: Icon(Icons.person_rounded, color: AppTheme.primaryPurple, size: 36),
+                            child: Icon(
+                              Icons.person_rounded,
+                              color: AppTheme.primaryPurple,
+                              size: 36,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -2290,13 +2581,27 @@ class _ProfileTab extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                user?.displayName ?? data['name'] ?? fallbackName,
-                                style: AppTheme.headingSmall.copyWith(color: Colors.white, fontSize: 22),
+                                (user?.displayName != null &&
+                                        user!.displayName!.trim().isNotEmpty)
+                                    ? user.displayName!
+                                    : (data['name'] != null &&
+                                          (data['name'] as String)
+                                              .trim()
+                                              .isNotEmpty)
+                                    ? data['name']
+                                    : fallbackName,
+                                style: AppTheme.headingSmall.copyWith(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 user?.email ?? '',
-                                style: AppTheme.labelStyle.copyWith(color: Colors.white.withAlpha(200), fontSize: 13),
+                                style: AppTheme.labelStyle.copyWith(
+                                  color: Colors.white.withAlpha(200),
+                                  fontSize: 13,
+                                ),
                               ),
                             ],
                           ),
@@ -2308,16 +2613,24 @@ class _ProfileTab extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       decoration: BoxDecoration(
-                        color: Colors.black.withAlpha(40),
+                        color: AppTheme.bluePurple.withAlpha(40),
                         borderRadius: BorderRadius.circular(18),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           _StatBlock(label: 'Sessions', value: '$sessions'),
-                          Container(width: 1, height: 30, color: Colors.white.withAlpha(40)),
+                          Container(
+                            width: 1,
+                            height: 30,
+                            color: Colors.white.withAlpha(40),
+                          ),
                           _StatBlock(label: 'Streak', value: '$streak🔥'),
-                          Container(width: 1, height: 30, color: Colors.white.withAlpha(40)),
+                          Container(
+                            width: 1,
+                            height: 30,
+                            color: Colors.white.withAlpha(40),
+                          ),
                           _StatBlock(label: 'Rating', value: '$rating⭐'),
                         ],
                       ),
@@ -2329,11 +2642,20 @@ class _ProfileTab extends StatelessWidget {
 
               // ── Credits Wallet ──────────────────────────────────────
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [BoxShadow(color: Colors.black.withAlpha(6), blurRadius: 10, offset: const Offset(0, 4))],
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.bluePurple.withAlpha(6),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
@@ -2344,18 +2666,32 @@ class _ProfileTab extends StatelessWidget {
                         color: const Color(0xFFFFF8E1),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Icon(Icons.monetization_on_rounded, color: Color(0xFFFFB300), size: 28),
+                      child: const Icon(
+                        Icons.monetization_on_rounded,
+                        color: Color(0xFFFFB300),
+                        size: 28,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Available Credits', style: AppTheme.labelStyle.copyWith(color: AppTheme.textMuted)),
+                          Text(
+                            'Available Credits',
+                            style: AppTheme.labelStyle.copyWith(
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
                           const SizedBox(height: 4),
                           Text(
                             '$credits Credits',
-                            style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w900, fontSize: 20, color: AppTheme.textDark),
+                            style: const TextStyle(
+                              fontFamily: 'Outfit',
+                              fontWeight: FontWeight.w900,
+                              fontSize: 20,
+                              color: AppTheme.textDark,
+                            ),
                           ),
                         ],
                       ),
@@ -2363,10 +2699,17 @@ class _ProfileTab extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 16),
+
+              // ── Buy Credits ─────────────────────────────────────────
+              _BuyCreditsSection(onAction: onAction),
               const SizedBox(height: 24),
 
               // ── Badges & Achievements ─────────────────────────────
-              Text('Achievements', style: AppTheme.headingSmall.copyWith(fontSize: 18)),
+              Text(
+                'Achievements',
+                style: AppTheme.headingSmall.copyWith(fontSize: 18),
+              ),
               const SizedBox(height: 12),
               SizedBox(
                 height: 100,
@@ -2382,18 +2725,35 @@ class _ProfileTab extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: (badge['color'] as Color).withAlpha(50), width: 1.5),
-                        boxShadow: [BoxShadow(color: (badge['color'] as Color).withAlpha(15), blurRadius: 10, offset: const Offset(0, 4))],
+                        border: Border.all(
+                          color: (badge['color'] as Color).withAlpha(50),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (badge['color'] as Color).withAlpha(15),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(badge['icon'] as IconData, color: badge['color'] as Color, size: 32),
+                          Icon(
+                            badge['icon'] as IconData,
+                            color: badge['color'] as Color,
+                            size: 32,
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             badge['name'] as String,
                             textAlign: TextAlign.center,
-                            style: AppTheme.labelStyle.copyWith(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textDark),
+                            style: AppTheme.labelStyle.copyWith(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textDark,
+                            ),
                           ),
                         ],
                       ),
@@ -2404,14 +2764,19 @@ class _ProfileTab extends StatelessWidget {
               const SizedBox(height: 28),
 
               // ── Active Role ─────────────────────────────────────────
-              Text('Active Role', style: AppTheme.headingSmall.copyWith(fontSize: 18)),
+              Text(
+                'Active Role',
+                style: AppTheme.headingSmall.copyWith(fontSize: 18),
+              ),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: AppTheme.surfaceWhite,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppTheme.primaryPurple.withAlpha(20)),
+                  border: Border.all(
+                    color: AppTheme.primaryPurple.withAlpha(20),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -2422,16 +2787,30 @@ class _ProfileTab extends StatelessWidget {
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
-                            color: intent == IntentMode.learn ? AppTheme.primaryPurple : Colors.transparent,
+                            color: intent == IntentMode.learn
+                                ? AppTheme.primaryPurple
+                                : Colors.transparent,
                             borderRadius: BorderRadius.circular(14),
-                            boxShadow: intent == IntentMode.learn ? [BoxShadow(color: AppTheme.primaryPurple.withAlpha(50), blurRadius: 10, offset: const Offset(0, 4))] : [],
+                            boxShadow: intent == IntentMode.learn
+                                ? [
+                                    BoxShadow(
+                                      color: AppTheme.primaryPurple.withAlpha(
+                                        50,
+                                      ),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ]
+                                : [],
                           ),
                           child: Center(
                             child: Text(
                               'Learner',
                               style: TextStyle(
                                 fontFamily: 'Outfit',
-                                color: intent == IntentMode.learn ? Colors.white : AppTheme.textMuted,
+                                color: intent == IntentMode.learn
+                                    ? Colors.white
+                                    : AppTheme.textMuted,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -2446,16 +2825,30 @@ class _ProfileTab extends StatelessWidget {
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
-                            color: intent == IntentMode.teach ? AppTheme.primaryPurple : Colors.transparent,
+                            color: intent == IntentMode.teach
+                                ? AppTheme.primaryPurple
+                                : Colors.transparent,
                             borderRadius: BorderRadius.circular(14),
-                            boxShadow: intent == IntentMode.teach ? [BoxShadow(color: AppTheme.primaryPurple.withAlpha(50), blurRadius: 10, offset: const Offset(0, 4))] : [],
+                            boxShadow: intent == IntentMode.teach
+                                ? [
+                                    BoxShadow(
+                                      color: AppTheme.primaryPurple.withAlpha(
+                                        50,
+                                      ),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ]
+                                : [],
                           ),
                           child: Center(
                             child: Text(
                               'Teacher',
                               style: TextStyle(
                                 fontFamily: 'Outfit',
-                                color: intent == IntentMode.teach ? Colors.white : AppTheme.textMuted,
+                                color: intent == IntentMode.teach
+                                    ? Colors.white
+                                    : AppTheme.textMuted,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -2469,7 +2862,10 @@ class _ProfileTab extends StatelessWidget {
               const SizedBox(height: 28),
 
               // ── Skills Snapshot ─────────────────────────────────────
-              Text('Skills Snapshot', style: AppTheme.headingSmall.copyWith(fontSize: 18)),
+              Text(
+                'Skills Snapshot',
+                style: AppTheme.headingSmall.copyWith(fontSize: 18),
+              ),
               const SizedBox(height: 12),
               _SkillLevelChips(skills: selectedSkills, isTeachSkills: true),
               const SizedBox(height: 32),
@@ -2483,10 +2879,22 @@ class _ProfileTab extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: AppTheme.primaryPurple,
-                    side: BorderSide(color: AppTheme.primaryPurple.withAlpha(80), width: 1.5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    side: BorderSide(
+                      color: AppTheme.primaryPurple.withAlpha(80),
+                      width: 1.5,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
                   ),
-                  child: const Text('Edit Profile', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w800, fontSize: 15)),
+                  child: const Text(
+                    'Edit Profile',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
@@ -2507,15 +2915,268 @@ class _ProfileTab extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     backgroundColor: const Color(0xFFFFF0F0),
                     foregroundColor: Colors.redAccent,
-                    side: BorderSide(color: Colors.redAccent.withAlpha(80), width: 1.5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    side: BorderSide(
+                      color: Colors.redAccent.withAlpha(80),
+                      width: 1.5,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
                   ),
-                  child: const Text('Log Out', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w800, fontSize: 15)),
+                  child: const Text(
+                    'Log Out',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                    ),
+                  ),
                 ),
               ),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _BuyCreditsSection extends StatelessWidget {
+  final ValueChanged<String> onAction;
+  const _BuyCreditsSection({required this.onAction});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryPurple.withAlpha(15),
+            AppTheme.bluePurple.withAlpha(10),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: AppTheme.primaryPurple.withAlpha(30),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryPurple.withAlpha(12),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppTheme.primaryPurple, AppTheme.bluePurple],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryPurple.withAlpha(40),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.shopping_cart_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Buy Credits',
+                      style: AppTheme.headingSmall.copyWith(fontSize: 18),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Get more credits for sessions',
+                      style: AppTheme.subtitleStyle.copyWith(fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Credit Packages
+          ...[
+            {'credits': 50, 'price': '\$4.99', 'popular': false},
+            {'credits': 100, 'price': '\$8.99', 'popular': true},
+            {'credits': 200, 'price': '\$15.99', 'popular': false},
+          ].asMap().entries.map((entry) {
+            final package = entry.value;
+            final credits = package['credits'] as int;
+            final price = package['price'] as String;
+            final isPopular = package['popular'] as bool;
+
+            return Padding(
+              padding: EdgeInsets.only(bottom: entry.key < 2 ? 12 : 0),
+              child: _CreditPackage(
+                credits: credits,
+                price: price,
+                isPopular: isPopular,
+                onBuy: () => onAction('Buy $credits credits for $price (demo)'),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class _CreditPackage extends StatelessWidget {
+  final int credits;
+  final String price;
+  final bool isPopular;
+  final VoidCallback onBuy;
+
+  const _CreditPackage({
+    required this.credits,
+    required this.price,
+    required this.isPopular,
+    required this.onBuy,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onBuy,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isPopular
+              ? AppTheme.primaryPurple.withAlpha(12)
+              : Colors.white.withAlpha(180),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isPopular
+                ? AppTheme.primaryPurple.withAlpha(60)
+                : AppTheme.primaryPurple.withAlpha(30),
+            width: isPopular ? 2 : 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.bluePurple.withAlpha(isPopular ? 12 : 6),
+              blurRadius: isPopular ? 16 : 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        '$credits Credits',
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                          color: isPopular
+                              ? AppTheme.primaryPurple
+                              : AppTheme.textDark,
+                        ),
+                      ),
+                      if (isPopular) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryPurple,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'POPULAR',
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontWeight: FontWeight.w800,
+                              fontSize: 10,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Perfect for ${credits < 100 ? 'quick sessions' : 'regular learning'}',
+                    style: AppTheme.labelStyle.copyWith(
+                      color: AppTheme.textMuted,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: isPopular
+                    ? AppTheme.buttonGradient
+                    : LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          AppTheme.bluePurple.withAlpha(200),
+                          AppTheme.bluePurple.withAlpha(150),
+                        ],
+                      ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryPurple.withAlpha(
+                      isPopular ? 40 : 20,
+                    ),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Text(
+                price,
+                style: const TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2530,9 +3191,23 @@ class _StatBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w900, fontSize: 18, color: Colors.white)),
+        Text(
+          value,
+          style: const TextStyle(
+            fontFamily: 'Outfit',
+            fontWeight: FontWeight.w900,
+            fontSize: 18,
+            color: Colors.white,
+          ),
+        ),
         const SizedBox(height: 2),
-        Text(label, style: AppTheme.labelStyle.copyWith(color: Colors.white.withAlpha(180), fontSize: 12)),
+        Text(
+          label,
+          style: AppTheme.labelStyle.copyWith(
+            color: Colors.white.withAlpha(180),
+            fontSize: 12,
+          ),
+        ),
       ],
     );
   }
@@ -2592,13 +3267,17 @@ class _UpcomingSessionsSheet extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 40),
                   child: Column(
                     children: [
-                      Icon(Icons.video_camera_back_outlined,
-                          size: 48, color: AppTheme.textMuted.withAlpha(100)),
+                      Icon(
+                        Icons.video_camera_back_outlined,
+                        size: 48,
+                        color: AppTheme.textMuted.withAlpha(100),
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         'No upcoming sessions found.',
-                        style: AppTheme.labelStyle
-                            .copyWith(color: AppTheme.textMuted),
+                        style: AppTheme.labelStyle.copyWith(
+                          color: AppTheme.textMuted,
+                        ),
                       ),
                     ],
                   ),
@@ -2621,7 +3300,8 @@ class _UpcomingSessionsSheet extends StatelessWidget {
                         color: AppTheme.primaryPurple.withAlpha(10),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                            color: AppTheme.primaryPurple.withAlpha(30)),
+                          color: AppTheme.primaryPurple.withAlpha(30),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2630,15 +3310,16 @@ class _UpcomingSessionsSheet extends StatelessWidget {
                             children: [
                               CircleAvatar(
                                 radius: 18,
-                                backgroundColor:
-                                    AppTheme.primaryPurple.withAlpha(40),
+                                backgroundColor: AppTheme.primaryPurple
+                                    .withAlpha(40),
                                 child: Text(
                                   session.fromName.isNotEmpty
                                       ? session.fromName[0].toUpperCase()
                                       : '?',
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.primaryPurple),
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.primaryPurple,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -2649,14 +3330,16 @@ class _UpcomingSessionsSheet extends StatelessWidget {
                                     Text(
                                       session.fromName,
                                       style: AppTheme.labelStyle.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
                                     ),
                                     Text(
                                       'Learning: ${session.skill}',
                                       style: AppTheme.labelStyle.copyWith(
-                                          fontSize: 13,
-                                          color: AppTheme.textMuted),
+                                        fontSize: 13,
+                                        color: AppTheme.textMuted,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -2666,13 +3349,17 @@ class _UpcomingSessionsSheet extends StatelessWidget {
                           const Divider(height: 24),
                           Row(
                             children: [
-                              const Icon(Icons.access_time_rounded,
-                                  size: 16, color: AppTheme.primaryPurple),
+                              const Icon(
+                                Icons.access_time_rounded,
+                                size: 16,
+                                color: AppTheme.primaryPurple,
+                              ),
                               const SizedBox(width: 8),
                               Text(
                                 session.slot,
-                                style: AppTheme.labelStyle
-                                    .copyWith(fontWeight: FontWeight.w700),
+                                style: AppTheme.labelStyle.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                               const Spacer(),
                               ElevatedButton(
@@ -2695,9 +3382,12 @@ class _UpcomingSessionsSheet extends StatelessWidget {
                                   backgroundColor: AppTheme.primaryPurple,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 8),
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
                                 ),
                                 child: const Text('Join Call'),
                               ),
@@ -2717,4 +3407,3 @@ class _UpcomingSessionsSheet extends StatelessWidget {
     );
   }
 }
-

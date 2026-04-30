@@ -8,6 +8,7 @@ class AppTheme {
   static const Color lightLavender = Color(0xFFEDE7FF);
   static const Color backgroundWhite = Color(0xFFFAF9FF);
   static const Color deepPurple = Color(0xFF2D1B69);
+  static const Color bluePurple = Color(0xFF5A4FCF);
   static const Color accentCoral = Color(0xFFFF7F7F);
   static const Color textDark = Color(0xFF1A1A2E);
   static const Color textMuted = Color(0xFF8A8AA8);
@@ -28,10 +29,7 @@ class AppTheme {
   static const LinearGradient buttonGradient = LinearGradient(
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
-    colors: [
-      Color(0xFF2D1B69),
-      Color(0xFF4A2FA3),
-    ],
+    colors: [Color(0xFF2D1B69), Color(0xFF4A2FA3)],
   );
 
   // ── TextStyles ───────────────────────────────────────────────────────────

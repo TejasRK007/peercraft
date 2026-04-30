@@ -41,7 +41,9 @@ class _SessionRequestsScreenState extends State<SessionRequestsScreen>
         body: Container(
           width: double.infinity,
           height: double.infinity,
-          decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+          decoration: const BoxDecoration(
+            gradient: AppTheme.backgroundGradient,
+          ),
           child: SafeArea(
             child: Column(
               children: [
@@ -60,7 +62,7 @@ class _SessionRequestsScreenState extends State<SessionRequestsScreen>
                             borderRadius: BorderRadius.circular(14),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withAlpha(14),
+                                color: AppTheme.bluePurple.withAlpha(14),
                                 blurRadius: 10,
                                 offset: const Offset(0, 3),
                               ),
@@ -103,11 +105,11 @@ class _SessionRequestsScreenState extends State<SessionRequestsScreen>
                     margin: const EdgeInsets.symmetric(horizontal: 24),
                     height: 48,
                     decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(180),
+                      color: AppTheme.bluePurple.withAlpha(10),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withAlpha(8),
+                          color: AppTheme.bluePurple.withAlpha(8),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -145,10 +147,7 @@ class _SessionRequestsScreenState extends State<SessionRequestsScreen>
                   Expanded(
                     child: TabBarView(
                       controller: _tabController,
-                      children: [
-                        _IncomingTab(),
-                        _SentTab(),
-                      ],
+                      children: [_IncomingTab(), _SentTab()],
                     ),
                   ),
                 ],
@@ -204,10 +203,7 @@ class _IncomingTab extends StatelessWidget {
           itemCount: requests.length,
           itemBuilder: (context, index) {
             final req = requests[index];
-            return _RequestCard(
-              request: req,
-              isIncoming: true,
-            );
+            return _RequestCard(request: req, isIncoming: true);
           },
         );
       },
@@ -258,10 +254,7 @@ class _SentTab extends StatelessWidget {
           itemCount: requests.length,
           itemBuilder: (context, index) {
             final req = requests[index];
-            return _RequestCard(
-              request: req,
-              isIncoming: false,
-            );
+            return _RequestCard(request: req, isIncoming: false);
           },
         );
       },
@@ -275,10 +268,7 @@ class _RequestCard extends StatelessWidget {
   final SessionRequest request;
   final bool isIncoming;
 
-  const _RequestCard({
-    required this.request,
-    required this.isIncoming,
-  });
+  const _RequestCard({required this.request, required this.isIncoming});
 
   Color get _statusColor {
     switch (request.status) {
@@ -318,7 +308,7 @@ class _RequestCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(8),
+            color: AppTheme.bluePurple.withAlpha(8),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -376,7 +366,10 @@ class _RequestCard extends StatelessWidget {
               ),
               // Status badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: _statusColor.withAlpha(20),
                   borderRadius: BorderRadius.circular(12),
@@ -455,7 +448,10 @@ class _RequestCard extends StatelessWidget {
                     label: const Text('Reject'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.redAccent,
-                      side: const BorderSide(color: Colors.redAccent, width: 1.3),
+                      side: const BorderSide(
+                        color: Colors.redAccent,
+                        width: 1.3,
+                      ),
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -486,7 +482,8 @@ class _RequestCard extends StatelessWidget {
                         peerName: _peerName,
                         teacherUid: request.teacherUid,
                         skill: request.skill,
-                        isTeacher: FirebaseAuth.instance.currentUser?.uid ==
+                        isTeacher:
+                            FirebaseAuth.instance.currentUser?.uid ==
                             request.teacherUid,
                       ),
                     ),
@@ -579,10 +576,7 @@ class _EmptyState extends StatelessWidget {
             child: Icon(icon, size: 36, color: AppTheme.primaryPurple),
           ),
           const SizedBox(height: 18),
-          Text(
-            title,
-            style: AppTheme.headingSmall.copyWith(fontSize: 18),
-          ),
+          Text(title, style: AppTheme.headingSmall.copyWith(fontSize: 18)),
           const SizedBox(height: 8),
           Text(
             subtitle,

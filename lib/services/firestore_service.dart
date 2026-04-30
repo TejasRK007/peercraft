@@ -146,25 +146,28 @@ class FirestoreService {
   }
 
   /// Stream real-time matches from Firestore.
-  /// Returns all users except the current user, converted to MockMatch objects.
+  /// Computes a true skill-overlap percentage between the current user and
+  /// every other user. Pass both [skillsToLearn] and [skillsToTeach] for
+  /// directional matching; falls back to [selectedSkills] if not provided.
   static Stream<List<MockMatch>> streamMatches({
     required IntentMode intent,
     required List<String> selectedSkills,
+    List<String> skillsToLearn = const [],
+    List<String> skillsToTeach = const [],
   }) {
     final currentUid = _auth.currentUser?.uid;
-
     return _usersRef.snapshots().map((snapshot) {
       final allUsers = <MockUser>[];
-
       for (final doc in snapshot.docs) {
-        // Skip current user
         if (doc.id == currentUid) continue;
-        final data = doc.data();
-        allUsers.add(MockUser.fromFirestore(doc.id, data));
+        allUsers.add(MockUser.fromFirestore(doc.id, doc.data()));
       }
-
-      // Run matching logic against real users
-      return _computeMatches(intent, selectedSkills, allUsers);
+      return _computeMatches(
+        intent: intent,
+        myLearnSkills: skillsToLearn.isNotEmpty ? skillsToLearn : selectedSkills,
+        myTeachSkills: skillsToTeach,
+        users: allUsers,
+      );
     });
   }
 
@@ -172,105 +175,132 @@ class FirestoreService {
   static Future<List<MockMatch>> getMatches({
     required IntentMode intent,
     required List<String> selectedSkills,
+    List<String> skillsToLearn = const [],
+    List<String> skillsToTeach = const [],
   }) async {
     final currentUid = _auth.currentUser?.uid;
     final snapshot = await _usersRef.get();
-
     final allUsers = <MockUser>[];
     for (final doc in snapshot.docs) {
       if (doc.id == currentUid) continue;
-      final data = doc.data();
-      allUsers.add(MockUser.fromFirestore(doc.id, data));
+      allUsers.add(MockUser.fromFirestore(doc.id, doc.data()));
     }
-
-    return _computeMatches(intent, selectedSkills, allUsers);
+    return _computeMatches(
+      intent: intent,
+      myLearnSkills: skillsToLearn.isNotEmpty ? skillsToLearn : selectedSkills,
+      myTeachSkills: skillsToTeach,
+      users: allUsers,
+    );
   }
 
-  /// Matching logic against real Firestore users.
-  static List<MockMatch> _computeMatches(
-    IntentMode intent,
-    List<String> selectedSkills,
-    List<MockUser> users,
-  ) {
-    final skills = selectedSkills
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList(growable: false);
+  // ── Core Matching Engine ──────────────────────────────────────────────────
+  //
+  // Match logic:
+  //   LEARN intent  → Look for users whose skillsToTeach overlaps my skillsToLearn
+  //   TEACH intent  → Look for users whose skillsToLearn overlaps my skillsToTeach
+  //   BOTH intent   → Average of both directions
+  //
+  // Match % = (overlapping skills / my required skills) x 100 (true 0–100 value)
 
-    if (skills.isEmpty) return [];
+  static List<MockMatch> _computeMatches({
+    required IntentMode intent,
+    required List<String> myLearnSkills,
+    required List<String> myTeachSkills,
+    required List<MockUser> users,
+  }) {
+    final myLearn = _normalise(myLearnSkills);
+    final myTeach = _normalise(myTeachSkills);
+
+    if (myLearn.isEmpty && myTeach.isEmpty) return [];
 
     final matches = <MockMatch>[];
 
     for (final user in users) {
-      // Check overlap with user's skillsToTeach
-      final teachOverlap =
-          _overlapInOrder(selected: skills, possible: user.skillsToTeach);
+      final theirTeach = _normalise(user.skillsToTeach);
+      final theirLearn = _normalise(user.skillsToLearn);
 
-      // Check overlap with user's skillsToLearn
-      final learnOverlap =
-          _overlapInOrder(selected: skills, possible: user.skillsToLearn);
+      // Learner score: how much of what I need can they teach?
+      final learnOverlap = _intersect(myLearn, theirTeach);
+      final learnScore = myLearn.isEmpty
+          ? 0
+          : (learnOverlap.length / myLearn.length * 100).round();
 
-      // Combine all overlapping skills (deduplicated)
-      final allOverlap = {...teachOverlap, ...learnOverlap}.toList();
+      // Teacher score: how much of what I can teach do they want to learn?
+      final teachOverlap = _intersect(myTeach, theirLearn);
+      final teachScore = myTeach.isEmpty
+          ? 0
+          : (teachOverlap.length / myTeach.length * 100).round();
 
-      if (allOverlap.isNotEmpty) {
-        final best = allOverlap.first;
+      final int matchScore;
+      final List<String> relevantOverlap;
+      final String tag;
+      final MatchSection section;
 
-        // Determine tag based on what overlapped
-        String tag;
-        MatchSection section;
-        if (teachOverlap.isNotEmpty && learnOverlap.isNotEmpty) {
-          tag = 'Peer Match';
-          section = MatchSection.learnFromThem;
-        } else if (teachOverlap.isNotEmpty) {
+      switch (intent) {
+        case IntentMode.learn:
+          if (learnScore == 0) continue;
+          matchScore = learnScore;
+          relevantOverlap = learnOverlap;
           tag = 'Can Teach You';
           section = MatchSection.learnFromThem;
-        } else {
+          break;
+        case IntentMode.teach:
+          if (teachScore == 0) continue;
+          matchScore = teachScore;
+          relevantOverlap = teachOverlap;
           tag = 'Wants to Learn';
           section = MatchSection.teachThem;
-        }
-
-        matches.add(MockMatch(
-          user: user,
-          section: section,
-          matchScore: _scoreForOverlap(
-              user.rating, allOverlap.length, skills.length),
-          matchSkill: best,
-          tag: tag,
-          matchReason: 'Shared interest in $best',
-        ));
+          break;
+        case IntentMode.both:
+          final allOverlap = {...learnOverlap, ...teachOverlap}.toList();
+          if (allOverlap.isEmpty) continue;
+          final sides = (myLearn.isNotEmpty ? 1 : 0) + (myTeach.isNotEmpty ? 1 : 0);
+          matchScore = sides == 0 ? 0 : ((learnScore + teachScore) ~/ sides);
+          if (matchScore == 0) continue;
+          relevantOverlap = allOverlap;
+          tag = (learnScore > 0 && teachScore > 0)
+              ? 'Peer Match'
+              : (learnScore > 0 ? 'Can Teach You' : 'Wants to Learn');
+          section = learnScore >= teachScore
+              ? MatchSection.learnFromThem
+              : MatchSection.teachThem;
+          break;
       }
+
+      if (relevantOverlap.isEmpty) continue;
+
+      matches.add(MockMatch(
+        user: user,
+        section: section,
+        matchScore: matchScore.clamp(1, 100),
+        matchSkill: _titleCase(relevantOverlap.first),
+        tag: tag,
+        matchReason: _buildMatchReason(relevantOverlap, tag),
+      ));
     }
 
-    // Sort by match score, then rating
     matches.sort((a, b) {
-      final scoreCmp = b.matchScore.compareTo(a.matchScore);
-      if (scoreCmp != 0) return scoreCmp;
-      return b.user.rating.compareTo(a.user.rating);
+      final s = b.matchScore.compareTo(a.matchScore);
+      return s != 0 ? s : b.user.rating.compareTo(a.user.rating);
     });
 
     return matches.take(20).toList(growable: false);
   }
 
-  static int _scoreForOverlap(
-      double rating, int overlapCount, int totalSelected) {
-    final overlapBoost = (overlapCount * 18).clamp(0, 54);
-    final selectedBoost =
-        (totalSelected <= 1) ? 12 : (12 - (totalSelected - 1) * 2);
-    final ratingBoost = ((rating - 4.0) * 28).round();
-    final score = 66 + overlapBoost + selectedBoost + ratingBoost;
-    return score.clamp(62, 99);
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  static Set<String> _normalise(List<String> skills) =>
+      skills.map((s) => s.trim().toLowerCase()).where((s) => s.isNotEmpty).toSet();
+
+  static List<String> _intersect(Set<String> a, Set<String> b) =>
+      a.intersection(b).toList();
+
+  static String _buildMatchReason(List<String> overlap, String tag) {
+    if (overlap.isEmpty) return 'Skill match';
+    if (overlap.length == 1) return 'Matched on ${_titleCase(overlap.first)}';
+    return 'Matched on ${_titleCase(overlap.first)} +${overlap.length - 1} more';
   }
 
-  static List<String> _overlapInOrder({
-    required List<String> selected,
-    required List<String> possible,
-  }) {
-    final possibleLower = possible.map((p) => p.toLowerCase()).toSet();
-    final overlap = <String>[];
-    for (final s in selected) {
-      if (possibleLower.contains(s.toLowerCase())) overlap.add(s);
-    }
-    return overlap;
-  }
+  static String _titleCase(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 }

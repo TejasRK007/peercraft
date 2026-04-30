@@ -22,10 +22,25 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
   TimeOfDay? _selectedTime;
 
   String get _formattedSlot {
-    if (_selectedDate == null || _selectedTime == null) return 'Pick a date & time';
+    if (_selectedDate == null || _selectedTime == null) {
+      return 'Pick a date & time';
+    }
     final d = _selectedDate!;
     final t = _selectedTime!;
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     final hour = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
     final period = t.period == DayPeriod.am ? 'AM' : 'PM';
     final min = t.minute.toString().padLeft(2, '0');
@@ -82,7 +97,9 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
         body: Container(
           width: double.infinity,
           height: double.infinity,
-          decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+          decoration: const BoxDecoration(
+            gradient: AppTheme.backgroundGradient,
+          ),
           child: SafeArea(
             child: Column(
               children: [
@@ -135,11 +152,15 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
                         Row(
                           children: [
                             Expanded(
-                              child: _SessionHistory(sessionsCompleted: match.user.sessionsCompleted),
+                              child: _SessionHistory(
+                                sessionsCompleted: match.user.sessionsCompleted,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: _RatingBreakdown(rating: match.user.rating),
+                              child: _RatingBreakdown(
+                                rating: match.user.rating,
+                              ),
                             ),
                           ],
                         ),
@@ -159,24 +180,33 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
                               child: GestureDetector(
                                 onTap: _pickDate,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 14,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withAlpha(230),
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
                                       color: _selectedDate != null
-                                          ? AppTheme.primaryPurple.withAlpha(160)
-                                          : AppTheme.primaryPurple.withAlpha(60),
+                                          ? AppTheme.primaryPurple.withAlpha(
+                                              160,
+                                            )
+                                          : AppTheme.primaryPurple.withAlpha(
+                                              60,
+                                            ),
                                       width: 1.2,
                                     ),
                                   ),
                                   child: Row(
                                     children: [
-                                      Icon(Icons.calendar_today_rounded,
-                                          size: 18,
-                                          color: _selectedDate != null
-                                              ? AppTheme.primaryPurple
-                                              : AppTheme.textMuted),
+                                      Icon(
+                                        Icons.calendar_today_rounded,
+                                        size: 18,
+                                        color: _selectedDate != null
+                                            ? AppTheme.primaryPurple
+                                            : AppTheme.textMuted,
+                                      ),
                                       const SizedBox(width: 10),
                                       Text(
                                         _selectedDate != null
@@ -199,24 +229,33 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
                               child: GestureDetector(
                                 onTap: _pickTime,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 14,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withAlpha(230),
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
                                       color: _selectedTime != null
-                                          ? AppTheme.primaryPurple.withAlpha(160)
-                                          : AppTheme.primaryPurple.withAlpha(60),
+                                          ? AppTheme.primaryPurple.withAlpha(
+                                              160,
+                                            )
+                                          : AppTheme.primaryPurple.withAlpha(
+                                              60,
+                                            ),
                                       width: 1.2,
                                     ),
                                   ),
                                   child: Row(
                                     children: [
-                                      Icon(Icons.access_time_rounded,
-                                          size: 18,
-                                          color: _selectedTime != null
-                                              ? AppTheme.primaryPurple
-                                              : AppTheme.textMuted),
+                                      Icon(
+                                        Icons.access_time_rounded,
+                                        size: 18,
+                                        color: _selectedTime != null
+                                            ? AppTheme.primaryPurple
+                                            : AppTheme.textMuted,
+                                      ),
                                       const SizedBox(width: 10),
                                       Text(
                                         _selectedTime != null
@@ -241,16 +280,24 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
                         // Selected summary
                         if (_hasSchedule)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
                               color: AppTheme.primaryPurple.withAlpha(12),
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: AppTheme.primaryPurple.withAlpha(50)),
+                              border: Border.all(
+                                color: AppTheme.primaryPurple.withAlpha(50),
+                              ),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.event_available_rounded,
-                                    size: 18, color: AppTheme.primaryPurple),
+                                const Icon(
+                                  Icons.event_available_rounded,
+                                  size: 18,
+                                  color: AppTheme.primaryPurple,
+                                ),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
@@ -320,24 +367,25 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
                   onChatFirst: () {
                     Navigator.of(context).push(
                       PageRouteBuilder(
-                        transitionDuration:
-                            const Duration(milliseconds: 420),
-                        pageBuilder: (_, __, ___) =>
-                            ChatScreen(
-                              peerId: match.user.uid,
-                              peerName: match.user.name,
-                            ),
+                        transitionDuration: const Duration(milliseconds: 420),
+                        pageBuilder: (_, __, ___) => ChatScreen(
+                          peerId: match.user.uid,
+                          peerName: match.user.name,
+                        ),
                         transitionsBuilder: (_, animation, __, child) {
                           return FadeTransition(
                             opacity: animation,
                             child: SlideTransition(
-                              position: Tween<Offset>(
-                                begin: const Offset(0, 0.06),
-                                end: Offset.zero,
-                              ).animate(CurvedAnimation(
-                                parent: animation,
-                                curve: Curves.easeOutCubic,
-                              )),
+                              position:
+                                  Tween<Offset>(
+                                    begin: const Offset(0, 0.06),
+                                    end: Offset.zero,
+                                  ).animate(
+                                    CurvedAnimation(
+                                      parent: animation,
+                                      curve: Curves.easeOutCubic,
+                                    ),
+                                  ),
                               child: child,
                             ),
                           );
@@ -375,7 +423,7 @@ class _HeaderBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withAlpha(14),
+                    color: AppTheme.bluePurple.withAlpha(14),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   ),
@@ -417,7 +465,7 @@ class _ProfileTop extends StatelessWidget {
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(10),
+            color: AppTheme.bluePurple.withAlpha(10),
             blurRadius: 22,
             offset: const Offset(0, 16),
           ),
@@ -472,8 +520,11 @@ class _ProfileTop extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.star_rounded,
-                  color: Color(0xFFFFC857), size: 18),
+              const Icon(
+                Icons.star_rounded,
+                color: Color(0xFFFFC857),
+                size: 18,
+              ),
               const SizedBox(width: 8),
               Text(
                 ' ${rating.toStringAsFixed(1)}',
@@ -502,11 +553,7 @@ class _Badge extends StatelessWidget {
   final String text;
   final IconData icon;
   final Color color;
-  const _Badge({
-    required this.text,
-    required this.icon,
-    required this.color,
-  });
+  const _Badge({required this.text, required this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -548,7 +595,7 @@ class _VerifiedPeer extends StatelessWidget {
         border: Border.all(color: AppTheme.primaryPurple.withAlpha(60)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(8),
+            color: AppTheme.bluePurple.withAlpha(8),
             blurRadius: 18,
             offset: const Offset(0, 12),
           ),
@@ -593,7 +640,10 @@ class _SkillChips extends StatelessWidget {
           backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
-            side: BorderSide(color: AppTheme.primaryPurple.withAlpha(110), width: 1),
+            side: BorderSide(
+              color: AppTheme.primaryPurple.withAlpha(110),
+              width: 1,
+            ),
           ),
         );
       }).toList(),
@@ -693,7 +743,6 @@ class _MatchPercentAnimated extends StatelessWidget {
   }
 }
 
-
 class _BottomActions extends StatelessWidget {
   final bool canSend;
   final Future<void> Function() onRequestSession;
@@ -716,7 +765,10 @@ class _BottomActions extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: canSend ? onRequestSession : null,
               icon: const Icon(Icons.send_rounded, size: 18),
-              label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Request Session')),
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('Request Session'),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryPurple,
                 foregroundColor: Colors.white,
@@ -739,7 +791,10 @@ class _BottomActions extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: onChatFirst,
               icon: const Icon(Icons.chat_rounded, size: 18),
-              label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Chat')),
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('Chat'),
+              ),
               style: OutlinedButton.styleFrom(
                 backgroundColor: Colors.white.withAlpha(230),
                 foregroundColor: AppTheme.primaryPurple,
@@ -765,7 +820,6 @@ class _BottomActions extends StatelessWidget {
   }
 }
 
-
 class _SessionHistory extends StatelessWidget {
   final int sessionsCompleted;
   const _SessionHistory({required this.sessionsCompleted});
@@ -777,12 +831,16 @@ class _SessionHistory extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withAlpha(230),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.black.withAlpha(10), width: 1),
+        border: Border.all(color: AppTheme.bluePurple.withAlpha(10), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.history_edu_rounded, color: AppTheme.primaryPurple, size: 26),
+          const Icon(
+            Icons.history_edu_rounded,
+            color: AppTheme.primaryPurple,
+            size: 26,
+          ),
           const SizedBox(height: 10),
           Text(
             '$sessionsCompleted',
@@ -814,7 +872,7 @@ class _RatingBreakdown extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withAlpha(230),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.black.withAlpha(10), width: 1),
+        border: Border.all(color: AppTheme.bluePurple.withAlpha(10), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

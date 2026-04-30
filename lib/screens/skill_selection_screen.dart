@@ -40,22 +40,84 @@ class _SkillSelectionScreenState extends State<SkillSelectionScreen>
   bool _isSaving = false;
 
   static const List<_PrimarySkill> _primarySkills = [
-    _PrimarySkill('Python', 'Scripting & AI', Icons.code_rounded, color: Color(0xFF7C5CFC)),
-    _PrimarySkill('Web Development', 'HTML, CSS & JS', Icons.web_rounded, color: Color(0xFF4A2FA3)),
-    _PrimarySkill('Flutter', 'Mobile Apps', Icons.phone_android_rounded, color: Color(0xFF2D1B69)),
-    _PrimarySkill('UI/UX Design', 'Figma Prototyping', Icons.design_services_rounded, color: Color(0xFF7C5CFC)),
-    _PrimarySkill('Public Speaking', 'Confidence Skills', Icons.mic_rounded, color: Color(0xFFFF7B54)),
-    _PrimarySkill('Guitar', 'Acoustic/Electric', Icons.music_note_rounded, color: Color(0xFFB39DDB)),
-    _PrimarySkill('Video Editing', 'Premiere Pro', Icons.video_library_rounded, color: Color(0xFF7C5CFC)),
-    _PrimarySkill('Data Science', 'Data Analysis', Icons.analytics_rounded, color: Color(0xFF4A2FA3)),
-    _PrimarySkill('Photography', 'DSLR & Editing', Icons.camera_alt_rounded, color: Color(0xFFFF7B54)),
-    _PrimarySkill('Dance', 'Choreography', Icons.directions_run_rounded, color: Color(0xFF2D1B69)),
+    _PrimarySkill(
+      'Python',
+      'Scripting & AI',
+      Icons.code_rounded,
+      color: Color(0xFF7C5CFC),
+    ),
+    _PrimarySkill(
+      'Web Development',
+      'HTML, CSS & JS',
+      Icons.web_rounded,
+      color: Color(0xFF4A2FA3),
+    ),
+    _PrimarySkill(
+      'Flutter',
+      'Mobile Apps',
+      Icons.phone_android_rounded,
+      color: Color(0xFF2D1B69),
+    ),
+    _PrimarySkill(
+      'UI/UX Design',
+      'Figma Prototyping',
+      Icons.design_services_rounded,
+      color: Color(0xFF7C5CFC),
+    ),
+    _PrimarySkill(
+      'Public Speaking',
+      'Confidence Skills',
+      Icons.mic_rounded,
+      color: Color(0xFFFF7B54),
+    ),
+    _PrimarySkill(
+      'Guitar',
+      'Acoustic/Electric',
+      Icons.music_note_rounded,
+      color: Color(0xFFB39DDB),
+    ),
+    _PrimarySkill(
+      'Video Editing',
+      'Premiere Pro',
+      Icons.video_library_rounded,
+      color: Color(0xFF7C5CFC),
+    ),
+    _PrimarySkill(
+      'Data Science',
+      'Data Analysis',
+      Icons.analytics_rounded,
+      color: Color(0xFF4A2FA3),
+    ),
+    _PrimarySkill(
+      'Photography',
+      'DSLR & Editing',
+      Icons.camera_alt_rounded,
+      color: Color(0xFFFF7B54),
+    ),
+    _PrimarySkill(
+      'Dance',
+      'Choreography',
+      Icons.directions_run_rounded,
+      color: Color(0xFF2D1B69),
+    ),
   ];
 
   static const List<String> _moreSkillOptions = [
-    'React', 'Java', 'C++', 'AI/ML', 'Cybersecurity', 'DevOps',
-    'Blockchain', 'Aptitude', 'Interview Prep', 'Resume Building',
-    'Communication Skills', 'Singing', 'Drawing', 'Chess', 'Marketing',
+    'React',
+    'Java',
+    'C++',
+    'AI/ML',
+    'Cybersecurity',
+    'DevOps',
+    'Blockchain',
+    'Aptitude',
+    'Interview Prep',
+    'Resume Building',
+    'Communication Skills',
+    'Singing',
+    'Drawing',
+    'Chess',
+    'Marketing',
   ];
 
   // Validation
@@ -72,7 +134,10 @@ class _SkillSelectionScreenState extends State<SkillSelectionScreen>
     super.initState();
     _learnSkills.addAll(widget.existingLearnSkills);
     _teachSkills.addAll(widget.existingTeachSkills);
-    _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
     _fadeIn = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
     _fadeController.forward();
   }
@@ -142,7 +207,7 @@ class _SkillSelectionScreenState extends State<SkillSelectionScreen>
       }
 
       if (!mounted) return;
-      
+
       final allSkills = {...learnList, ...teachList}.toList();
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
@@ -156,8 +221,16 @@ class _SkillSelectionScreenState extends State<SkillSelectionScreen>
           transitionsBuilder: (_, animation, __, child) => FadeTransition(
             opacity: animation,
             child: SlideTransition(
-              position: Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
-                  .animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(0, 0.05),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutCubic,
+                    ),
+                  ),
               child: child,
             ),
           ),
@@ -191,8 +264,16 @@ class _SkillSelectionScreenState extends State<SkillSelectionScreen>
         transitionsBuilder: (_, animation, __, child) => FadeTransition(
           opacity: animation,
           child: SlideTransition(
-            position: Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
-                .animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+            position:
+                Tween<Offset>(
+                  begin: const Offset(0, 0.05),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  ),
+                ),
             child: child,
           ),
         ),
@@ -209,7 +290,9 @@ class _SkillSelectionScreenState extends State<SkillSelectionScreen>
         body: Container(
           width: double.infinity,
           height: double.infinity,
-          decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+          decoration: const BoxDecoration(
+            gradient: AppTheme.backgroundGradient,
+          ),
           child: SafeArea(
             child: Column(
               children: [
@@ -223,13 +306,24 @@ class _SkillSelectionScreenState extends State<SkillSelectionScreen>
                         GestureDetector(
                           onTap: () => Navigator.of(context).pop(),
                           child: Container(
-                            width: 42, height: 42,
+                            width: 42,
+                            height: 42,
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(14),
-                              boxShadow: [BoxShadow(color: Colors.black.withAlpha(14), blurRadius: 10, offset: const Offset(0, 3))],
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.bluePurple.withAlpha(14),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
                             ),
-                            child: const Icon(Icons.arrow_back_rounded, color: AppTheme.deepPurple, size: 20),
+                            child: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: AppTheme.deepPurple,
+                              size: 20,
+                            ),
                           ),
                         ),
                       ],
@@ -242,7 +336,10 @@ class _SkillSelectionScreenState extends State<SkillSelectionScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Choose Your Skills', style: AppTheme.headlineStyle.copyWith(fontSize: 28)),
+                      Text(
+                        'Choose Your Skills',
+                        style: AppTheme.headlineStyle.copyWith(fontSize: 28),
+                      ),
                       const SizedBox(height: 6),
                       Text(
                         'Add skills you want to learn AND skills you can teach — at least 1 from each.',
@@ -285,7 +382,8 @@ class _SkillSelectionScreenState extends State<SkillSelectionScreen>
                             _SelectedChips(
                               skills: _learnSkills,
                               color: const Color(0xFF7C5CFC),
-                              onRemove: (s) => setState(() => _learnSkills.remove(s)),
+                              onRemove: (s) =>
+                                  setState(() => _learnSkills.remove(s)),
                             ),
                           ],
                           const SizedBox(height: 22),
@@ -318,7 +416,8 @@ class _SkillSelectionScreenState extends State<SkillSelectionScreen>
                             _SelectedChips(
                               skills: _teachSkills,
                               color: const Color(0xFFFF7B54),
-                              onRemove: (s) => setState(() => _teachSkills.remove(s)),
+                              onRemove: (s) =>
+                                  setState(() => _teachSkills.remove(s)),
                             ),
                           ],
                           const SizedBox(height: 22),
@@ -341,10 +440,18 @@ class _SkillSelectionScreenState extends State<SkillSelectionScreen>
                       decoration: BoxDecoration(
                         gradient: _canContinue
                             ? AppTheme.buttonGradient
-                            : const LinearGradient(colors: [Color(0xFFCEC8E4), Color(0xFFCEC8E4)]),
+                            : const LinearGradient(
+                                colors: [Color(0xFFCEC8E4), Color(0xFFCEC8E4)],
+                              ),
                         borderRadius: BorderRadius.circular(50),
                         boxShadow: _canContinue
-                            ? [BoxShadow(color: const Color(0xFF2D1B69).withAlpha(70), blurRadius: 18, offset: const Offset(0, 8))]
+                            ? [
+                                BoxShadow(
+                                  color: const Color(0xFF2D1B69).withAlpha(70),
+                                  blurRadius: 18,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ]
                             : [],
                       ),
                       child: InkWell(
@@ -352,16 +459,34 @@ class _SkillSelectionScreenState extends State<SkillSelectionScreen>
                         onTap: _canContinue ? _onContinue : null,
                         child: Center(
                           child: _isSaving
-                              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white))
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.2,
+                                    color: Colors.white,
+                                  ),
+                                )
                               : Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Text('Continue', style: AppTheme.buttonTextStyle),
+                                    const Text(
+                                      'Continue',
+                                      style: AppTheme.buttonTextStyle,
+                                    ),
                                     const SizedBox(width: 10),
                                     Container(
-                                      width: 26, height: 26,
-                                      decoration: BoxDecoration(color: Colors.white.withAlpha(30), borderRadius: BorderRadius.circular(50)),
-                                      child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 14),
+                                      width: 26,
+                                      height: 26,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withAlpha(30),
+                                        borderRadius: BorderRadius.circular(50),
+                                      ),
+                                      child: const Icon(
+                                        Icons.arrow_forward_rounded,
+                                        color: Colors.white,
+                                        size: 14,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -409,8 +534,12 @@ class _SectionHeader extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(color: color.withAlpha(25), borderRadius: BorderRadius.circular(14)),
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: color.withAlpha(25),
+              borderRadius: BorderRadius.circular(14),
+            ),
             child: Icon(icon, color: color, size: 22),
           ),
           const SizedBox(width: 14),
@@ -421,31 +550,65 @@ class _SectionHeader extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(label, style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.textDark)),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
                     ),
                     if (required)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: color.withAlpha(25), borderRadius: BorderRadius.circular(999)),
-                        child: Text('Required', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 11, color: color)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: color.withAlpha(25),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          'Required',
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11,
+                            color: color,
+                          ),
+                        ),
                       ),
                   ],
                 ),
                 const SizedBox(height: 3),
-                Text(subtitle, style: AppTheme.subtitleStyle.copyWith(fontSize: 12.5)),
+                Text(
+                  subtitle,
+                  style: AppTheme.subtitleStyle.copyWith(fontSize: 12.5),
+                ),
               ],
             ),
           ),
           const SizedBox(width: 10),
           AnimatedContainer(
             duration: const Duration(milliseconds: 250),
-            width: 32, height: 32,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               color: count > 0 ? color : Colors.grey.shade200,
               shape: BoxShape.circle,
             ),
             child: Center(
-              child: Text('$count', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w900, fontSize: 13, color: count > 0 ? Colors.white : AppTheme.textMuted)),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.w900,
+                  fontSize: 13,
+                  color: count > 0 ? Colors.white : AppTheme.textMuted,
+                ),
+              ),
             ),
           ),
         ],
@@ -492,8 +655,17 @@ class _SkillGrid extends StatelessWidget {
             decoration: BoxDecoration(
               color: isSelected ? color.withAlpha(38) : Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: isSelected ? color : Colors.transparent, width: 2),
-              boxShadow: [BoxShadow(color: Colors.black.withAlpha(isSelected ? 10 : 6), blurRadius: isSelected ? 16 : 10, offset: const Offset(0, 5))],
+              border: Border.all(
+                color: isSelected ? color : Colors.transparent,
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.bluePurple.withAlpha(isSelected ? 10 : 6),
+                  blurRadius: isSelected ? 16 : 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
             padding: const EdgeInsets.all(13),
             child: Column(
@@ -501,27 +673,64 @@ class _SkillGrid extends StatelessWidget {
               children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 220),
-                  width: 40, height: 40,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
-                    color: isSelected ? color.withAlpha(28) : s.color.withAlpha(15),
+                    color: isSelected
+                        ? color.withAlpha(28)
+                        : s.color.withAlpha(15),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: isSelected ? color : Colors.transparent, width: 1.5),
+                    border: Border.all(
+                      color: isSelected ? color : Colors.transparent,
+                      width: 1.5,
+                    ),
                   ),
-                  child: Icon(s.icon, color: isSelected ? color : AppTheme.deepPurple, size: 19),
+                  child: Icon(
+                    s.icon,
+                    color: isSelected ? color : AppTheme.deepPurple,
+                    size: 19,
+                  ),
                 ),
                 const Spacer(),
-                Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w800, fontSize: 13.5, color: AppTheme.textDark, height: 1.2)),
+                Text(
+                  s.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'Outfit',
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13.5,
+                    color: AppTheme.textDark,
+                    height: 1.2,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(s.desc, maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: AppTheme.labelStyle.copyWith(color: AppTheme.textMuted, fontSize: 11)),
+                Text(
+                  s.desc,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTheme.labelStyle.copyWith(
+                    color: AppTheme.textMuted,
+                    fontSize: 11,
+                  ),
+                ),
                 if (isSelected) ...[
                   const SizedBox(height: 4),
-                  Row(children: [
-                    Icon(Icons.check_circle_rounded, color: color, size: 13),
-                    const SizedBox(width: 4),
-                    Text('Selected', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600, fontSize: 11, color: color)),
-                  ]),
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle_rounded, color: color, size: 13),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Selected',
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                          color: color,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ],
             ),
@@ -548,17 +757,44 @@ class _AddMoreBar extends StatelessWidget {
           color: Colors.white.withAlpha(180),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withAlpha(55), width: 1.2),
-          boxShadow: [BoxShadow(color: Colors.black.withAlpha(6), blurRadius: 10, offset: const Offset(0, 4))],
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.bluePurple.withAlpha(6),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
             Icon(Icons.add_circle_outline_rounded, color: color, size: 20),
             const SizedBox(width: 10),
-            Expanded(child: Text("Don't see your skill? Add a custom one", style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600, fontSize: 13.5, color: AppTheme.textDark))),
+            Expanded(
+              child: Text(
+                "Don't see your skill? Add a custom one",
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13.5,
+                  color: AppTheme.textDark,
+                ),
+              ),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(10)),
-              child: const Text('Add', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white)),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text(
+                'Add',
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ],
         ),
@@ -572,7 +808,11 @@ class _SelectedChips extends StatelessWidget {
   final List<String> skills;
   final Color color;
   final ValueChanged<String> onRemove;
-  const _SelectedChips({required this.skills, required this.color, required this.onRemove});
+  const _SelectedChips({
+    required this.skills,
+    required this.color,
+    required this.onRemove,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -581,7 +821,14 @@ class _SelectedChips extends StatelessWidget {
       runSpacing: 8,
       children: skills.map((skill) {
         return Chip(
-          label: Text(skill, style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600, color: color)),
+          label: Text(
+            skill,
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
           backgroundColor: color.withAlpha(18),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
@@ -604,7 +851,11 @@ class _AddSkillModal extends StatefulWidget {
   final String sectionLabel;
   final ValueChanged<String> onAddSkill;
 
-  const _AddSkillModal({required this.options, required this.sectionLabel, required this.onAddSkill});
+  const _AddSkillModal({
+    required this.options,
+    required this.sectionLabel,
+    required this.onAddSkill,
+  });
 
   @override
   State<_AddSkillModal> createState() => _AddSkillModalState();
@@ -626,14 +877,20 @@ class _AddSkillModalState extends State<_AddSkillModal> {
     widget.onAddSkill(normalized);
     _customController.clear();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('"$normalized" added to ${widget.sectionLabel}'), backgroundColor: AppTheme.primaryPurple, duration: const Duration(seconds: 2)),
+      SnackBar(
+        content: Text('"$normalized" added to ${widget.sectionLabel}'),
+        backgroundColor: AppTheme.primaryPurple,
+        duration: const Duration(seconds: 2),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final isLearn = widget.sectionLabel == 'Learn';
-    final accentColor = isLearn ? const Color(0xFF7C5CFC) : const Color(0xFFFF7B54);
+    final accentColor = isLearn
+        ? const Color(0xFF7C5CFC)
+        : const Color(0xFFFF7B54);
 
     return SafeArea(
       top: false,
@@ -642,7 +899,13 @@ class _AddSkillModalState extends State<_AddSkillModal> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          boxShadow: [BoxShadow(color: accentColor.withAlpha(30), blurRadius: 28, offset: const Offset(0, -10))],
+          boxShadow: [
+            BoxShadow(
+              color: accentColor.withAlpha(30),
+              blurRadius: 28,
+              offset: const Offset(0, -10),
+            ),
+          ],
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -650,37 +913,67 @@ class _AddSkillModalState extends State<_AddSkillModal> {
             children: [
               Center(
                 child: Container(
-                  width: 56, height: 6,
-                  decoration: BoxDecoration(color: accentColor.withAlpha(60), borderRadius: BorderRadius.circular(999)),
+                  width: 56,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: accentColor.withAlpha(60),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(color: accentColor.withAlpha(20), borderRadius: BorderRadius.circular(12)),
-                    child: Icon(isLearn ? Icons.school_rounded : Icons.lightbulb_rounded, color: accentColor, size: 18),
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: accentColor.withAlpha(20),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      isLearn ? Icons.school_rounded : Icons.lightbulb_rounded,
+                      color: accentColor,
+                      size: 18,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Add Skill to ${widget.sectionLabel}', style: AppTheme.headingSmall),
-                      Text('Pick from list or type your own', style: AppTheme.subtitleStyle.copyWith(fontSize: 12.5)),
+                      Text(
+                        'Add Skill to ${widget.sectionLabel}',
+                        style: AppTheme.headingSmall,
+                      ),
+                      Text(
+                        'Pick from list or type your own',
+                        style: AppTheme.subtitleStyle.copyWith(fontSize: 12.5),
+                      ),
                     ],
                   ),
                 ],
               ),
               const SizedBox(height: 20),
 
-              Text('Popular skills', style: AppTheme.labelStyle.copyWith(color: AppTheme.textMuted, fontWeight: FontWeight.w700)),
+              Text(
+                'Popular skills',
+                style: AppTheme.labelStyle.copyWith(
+                  color: AppTheme.textMuted,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 10),
               Container(
                 decoration: BoxDecoration(
                   color: AppTheme.surfaceWhite,
                   borderRadius: BorderRadius.circular(18),
-                  boxShadow: [BoxShadow(color: Colors.black.withAlpha(6), blurRadius: 14, offset: const Offset(0, 4))],
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.bluePurple.withAlpha(6),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: DropdownButtonHideUnderline(
@@ -688,15 +981,32 @@ class _AddSkillModalState extends State<_AddSkillModal> {
                     isExpanded: true,
                     value: _dropdownValue,
                     hint: const Text('Select a skill'),
-                    icon: Icon(Icons.keyboard_arrow_down_rounded, color: accentColor),
-                    style: AppTheme.bodyStyle.copyWith(fontWeight: FontWeight.w700, fontFamily: 'Outfit'),
-                    items: widget.options.map((opt) => DropdownMenuItem<String>(value: opt, child: Text(opt))).toList(),
+                    icon: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: accentColor,
+                    ),
+                    style: AppTheme.bodyStyle.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'Outfit',
+                    ),
+                    items: widget.options
+                        .map(
+                          (opt) => DropdownMenuItem<String>(
+                            value: opt,
+                            child: Text(opt),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (v) {
                       if (v == null) return;
                       widget.onAddSkill(v);
                       setState(() => _dropdownValue = null);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('"$v" added to ${widget.sectionLabel}'), backgroundColor: accentColor, duration: const Duration(seconds: 2)),
+                        SnackBar(
+                          content: Text('"$v" added to ${widget.sectionLabel}'),
+                          backgroundColor: accentColor,
+                          duration: const Duration(seconds: 2),
+                        ),
                       );
                     },
                   ),
@@ -704,7 +1014,13 @@ class _AddSkillModalState extends State<_AddSkillModal> {
               ),
 
               const SizedBox(height: 20),
-              Text('Custom skill', style: AppTheme.labelStyle.copyWith(color: AppTheme.textMuted, fontWeight: FontWeight.w700)),
+              Text(
+                'Custom skill',
+                style: AppTheme.labelStyle.copyWith(
+                  color: AppTheme.textMuted,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -715,7 +1031,10 @@ class _AddSkillModalState extends State<_AddSkillModal> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: accentColor.withAlpha(110), width: 1.1),
+                        border: Border.all(
+                          color: accentColor.withAlpha(110),
+                          width: 1.1,
+                        ),
                       ),
                       child: TextField(
                         controller: _customController,
@@ -735,10 +1054,21 @@ class _AddSkillModalState extends State<_AddSkillModal> {
                       backgroundColor: accentColor,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
-                    child: const Text('Add', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w800)),
+                    child: const Text(
+                      'Add',
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -748,7 +1078,14 @@ class _AddSkillModalState extends State<_AddSkillModal> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: Text('Done', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, color: accentColor)),
+                  child: Text(
+                    'Done',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontWeight: FontWeight.w700,
+                      color: accentColor,
+                    ),
+                  ),
                 ),
               ),
             ],
