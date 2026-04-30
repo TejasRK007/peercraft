@@ -7,6 +7,7 @@ import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/skill_selection_screen.dart';
 import 'services/onboarding_preferences_service.dart';
+import 'services/firestore_service.dart';
 import 'models/intent_mode.dart';
 
 void main() async {
@@ -73,8 +74,31 @@ class AuthGate extends StatelessWidget {
         }
 
         // User is logged in, check if they have completed skill setup
-        return FutureBuilder<({IntentMode intent, List<String> skillsToLearn, List<String> skillsToTeach})?> (
-          future: OnboardingPreferencesService().loadSkills(),
+        return FutureBuilder(
+          future: () async {
+            var data = await OnboardingPreferencesService().loadSkills();
+            if (data == null || (data.skillsToLearn.isEmpty && data.skillsToTeach.isEmpty)) {
+              // Check Firestore
+              final profile = await FirestoreService.loadUserProfile();
+              if (profile != null) {
+                final intentStr = profile['intent'] as String? ?? 'both';
+                final intent = IntentMode.values.firstWhere((e) => e.name == intentStr, orElse: () => IntentMode.both);
+                final lSkills = List<String>.from(profile['skillsToLearn'] ?? []);
+                final tSkills = List<String>.from(profile['skillsToTeach'] ?? []);
+                
+                if (lSkills.isNotEmpty || tSkills.isNotEmpty) {
+                  // Sync to local preferences
+                  await OnboardingPreferencesService().saveSkills(
+                    intent: intent,
+                    skillsToLearn: lSkills,
+                    skillsToTeach: tSkills,
+                  );
+                  data = (intent: intent, skillsToLearn: lSkills, skillsToTeach: tSkills);
+                }
+              }
+            }
+            return data;
+          }(),
           builder: (context, prefSnapshot) {
             if (prefSnapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(
@@ -86,7 +110,7 @@ class AuthGate extends StatelessWidget {
             }
 
             final data = prefSnapshot.data;
-            // If local data isn't found, send them to setup their skills
+            // If data is still null, brand new user, send to setup
             if (data == null || (data.skillsToLearn.isEmpty && data.skillsToTeach.isEmpty)) {
               return const SkillSelectionScreen(intent: IntentMode.both);
             }

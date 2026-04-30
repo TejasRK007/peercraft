@@ -11,6 +11,14 @@ class FirestoreService {
   static CollectionReference<Map<String, dynamic>> get _usersRef =>
       _firestore.collection('users');
 
+  /// Load user profile from Firestore.
+  static Future<Map<String, dynamic>?> loadUserProfile() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    final doc = await _usersRef.doc(user.uid).get();
+    return doc.data();
+  }
+
   /// Save or update the current user's profile to Firestore.
   static Future<void> saveUserProfile({
     required IntentMode intent,

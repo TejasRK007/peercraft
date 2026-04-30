@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../app_theme.dart';
-import 'skill_selection_screen.dart';
-import '../models/intent_mode.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -135,25 +133,9 @@ class _LoginScreenState extends State<LoginScreen>
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 520),
-        pageBuilder: (_, __, ___) => const SkillSelectionScreen(intent: IntentMode.learn),
-        transitionsBuilder: (_, animation, __, child) => FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.06),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            )),
-            child: child,
-          ),
-        ),
-      ),
-    );
+    // Pop back to root. main.dart's auth state listener will handle routing
+    // either to SkillSelectionScreen (new user) or HomeScreen (existing user).
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   @override

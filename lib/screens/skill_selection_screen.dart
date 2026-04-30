@@ -4,11 +4,23 @@ import 'package:flutter/services.dart';
 import '../app_theme.dart';
 import '../models/intent_mode.dart';
 import '../services/onboarding_preferences_service.dart';
+import '../services/firestore_service.dart';
 import 'skill_quiz_screen.dart';
+import 'home_screen.dart';
 
 class SkillSelectionScreen extends StatefulWidget {
   final IntentMode intent;
-  const SkillSelectionScreen({super.key, required this.intent});
+  final bool isAddingSkills;
+  final List<String> existingLearnSkills;
+  final List<String> existingTeachSkills;
+
+  const SkillSelectionScreen({
+    super.key,
+    required this.intent,
+    this.isAddingSkills = false,
+    this.existingLearnSkills = const [],
+    this.existingTeachSkills = const [],
+  });
 
   @override
   State<SkillSelectionScreen> createState() => _SkillSelectionScreenState();
@@ -28,16 +40,16 @@ class _SkillSelectionScreenState extends State<SkillSelectionScreen>
   bool _isSaving = false;
 
   static const List<_PrimarySkill> _primarySkills = [
-    _PrimarySkill('Python', Icons.code_rounded, color: Color(0xFF7C5CFC)),
-    _PrimarySkill('Web Development', Icons.web_rounded, color: Color(0xFF4A2FA3)),
-    _PrimarySkill('Flutter', Icons.phone_android_rounded, color: Color(0xFF2D1B69)),
-    _PrimarySkill('UI/UX Design', Icons.design_services_rounded, color: Color(0xFF7C5CFC)),
-    _PrimarySkill('Public Speaking', Icons.mic_rounded, color: Color(0xFFFF7B54)),
-    _PrimarySkill('Guitar', Icons.music_note_rounded, color: Color(0xFFB39DDB)),
-    _PrimarySkill('Video Editing', Icons.video_library_rounded, color: Color(0xFF7C5CFC)),
-    _PrimarySkill('Data Science', Icons.analytics_rounded, color: Color(0xFF4A2FA3)),
-    _PrimarySkill('Photography', Icons.camera_alt_rounded, color: Color(0xFFFF7B54)),
-    _PrimarySkill('Dance', Icons.directions_run_rounded, color: Color(0xFF2D1B69)),
+    _PrimarySkill('Python', 'Scripting & AI', Icons.code_rounded, color: Color(0xFF7C5CFC)),
+    _PrimarySkill('Web Development', 'HTML, CSS & JS', Icons.web_rounded, color: Color(0xFF4A2FA3)),
+    _PrimarySkill('Flutter', 'Mobile Apps', Icons.phone_android_rounded, color: Color(0xFF2D1B69)),
+    _PrimarySkill('UI/UX Design', 'Figma Prototyping', Icons.design_services_rounded, color: Color(0xFF7C5CFC)),
+    _PrimarySkill('Public Speaking', 'Confidence Skills', Icons.mic_rounded, color: Color(0xFFFF7B54)),
+    _PrimarySkill('Guitar', 'Acoustic/Electric', Icons.music_note_rounded, color: Color(0xFFB39DDB)),
+    _PrimarySkill('Video Editing', 'Premiere Pro', Icons.video_library_rounded, color: Color(0xFF7C5CFC)),
+    _PrimarySkill('Data Science', 'Data Analysis', Icons.analytics_rounded, color: Color(0xFF4A2FA3)),
+    _PrimarySkill('Photography', 'DSLR & Editing', Icons.camera_alt_rounded, color: Color(0xFFFF7B54)),
+    _PrimarySkill('Dance', 'Choreography', Icons.directions_run_rounded, color: Color(0xFF2D1B69)),
   ];
 
   static const List<String> _moreSkillOptions = [
@@ -46,13 +58,20 @@ class _SkillSelectionScreenState extends State<SkillSelectionScreen>
     'Communication Skills', 'Singing', 'Drawing', 'Chess', 'Marketing',
   ];
 
-  // Both sections are always required regardless of intent.
-  bool get _canContinue =>
-      _learnSkills.isNotEmpty && _teachSkills.isNotEmpty && !_isSaving;
+  // Validation
+  bool get _canContinue {
+    if (_isSaving) return false;
+    if (widget.isAddingSkills) {
+      return _learnSkills.isNotEmpty || _teachSkills.isNotEmpty;
+    }
+    return _learnSkills.isNotEmpty && _teachSkills.isNotEmpty;
+  }
 
   @override
   void initState() {
     super.initState();
+    _learnSkills.addAll(widget.existingLearnSkills);
+    _teachSkills.addAll(widget.existingTeachSkills);
     _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
     _fadeIn = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
     _fadeController.forward();
@@ -102,6 +121,50 @@ class _SkillSelectionScreenState extends State<SkillSelectionScreen>
 
     final learnList = List<String>.from(_learnSkills);
     final teachList = List<String>.from(_teachSkills);
+
+    if (teachList.isEmpty) {
+      // If no teach skills, skip quiz and save everything right away
+      try {
+        await Future.wait([
+          _prefs.saveSkills(
+            intent: widget.intent,
+            skillsToLearn: learnList,
+            skillsToTeach: teachList,
+          ),
+          FirestoreService.saveUserProfile(
+            intent: widget.intent,
+            skillsToLearn: learnList,
+            skillsToTeach: teachList,
+          ),
+        ]);
+      } finally {
+        if (mounted) setState(() => _isSaving = false);
+      }
+
+      if (!mounted) return;
+      
+      final allSkills = {...learnList, ...teachList}.toList();
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 560),
+          pageBuilder: (_, __, ___) => HomeScreen(
+            selectedSkills: allSkills,
+            skillsToLearn: learnList,
+            skillsToTeach: teachList,
+            intent: widget.intent,
+          ),
+          transitionsBuilder: (_, animation, __, child) => FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
+                  .animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+              child: child,
+            ),
+          ),
+        ),
+      );
+      return;
+    }
 
     // Only save learn skills now; teach skills will be finalised after quiz
     try {
@@ -447,8 +510,11 @@ class _SkillGrid extends StatelessWidget {
                   child: Icon(s.icon, color: isSelected ? color : AppTheme.deepPurple, size: 19),
                 ),
                 const Spacer(),
-                Text(s.name, maxLines: 2, overflow: TextOverflow.ellipsis,
+                Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w800, fontSize: 13.5, color: AppTheme.textDark, height: 1.2)),
+                const SizedBox(height: 2),
+                Text(s.desc, maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: AppTheme.labelStyle.copyWith(color: AppTheme.textMuted, fontSize: 11)),
                 if (isSelected) ...[
                   const SizedBox(height: 4),
                   Row(children: [
@@ -695,7 +761,8 @@ class _AddSkillModalState extends State<_AddSkillModal> {
 
 class _PrimarySkill {
   final String name;
+  final String desc;
   final IconData icon;
   final Color color;
-  const _PrimarySkill(this.name, this.icon, {required this.color});
+  const _PrimarySkill(this.name, this.desc, this.icon, {required this.color});
 }

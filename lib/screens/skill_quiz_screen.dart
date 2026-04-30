@@ -11,15 +11,15 @@ import 'home_screen.dart';
 // ── Result model ─────────────────────────────────────────────
 class SkillQuizResult {
   final String skill;
-  final int score; // 0-10
+  final int score; // 0-5
   final String? level; // null = removed (score < 2)
 
   const SkillQuizResult({required this.skill, required this.score, this.level});
 
   static String? levelForScore(int score) {
     if (score < 2) return null;
-    if (score <= 5) return 'Beginner';
-    if (score <= 8) return 'Medium';
+    if (score <= 3) return 'Beginner';
+    if (score == 4) return 'Medium';
     return 'Advanced';
   }
 }
@@ -50,8 +50,8 @@ class _SkillQuizScreenState extends State<SkillQuizScreen>
   bool _answered = false;
   bool _saving = false;
 
-  // 15 minutes per skill
-  static const int _totalSeconds = 15 * 60;
+  // 2 minutes per skill
+  static const int _totalSeconds = 2 * 60;
   int _secondsLeft = _totalSeconds;
   Timer? _timer;
 
@@ -75,8 +75,12 @@ class _SkillQuizScreenState extends State<SkillQuizScreen>
   }
 
   void _loadSkill() {
+    if (widget.teachSkills.isEmpty) {
+      _finishAll();
+      return;
+    }
     final skill = widget.teachSkills[_skillIndex];
-    _questions = getQuestionsForSkill(skill);
+    _questions = getQuestionsForSkill(skill).take(5).toList();
     _questionIndex = 0;
     _score = 0;
     _selectedOption = null;
@@ -500,7 +504,7 @@ class _ResultDialog extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Score: $score / 10',
+            'Score: $score / 5',
             style: AppTheme.subtitleStyle.copyWith(fontSize: 16, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),

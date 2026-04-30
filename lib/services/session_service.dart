@@ -162,6 +162,35 @@ class SessionService {
     });
   }
 
+  /// Stream all user history (sent and received) for the History tab.
+  static Stream<List<SessionRequest>> streamAllHistory() {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return Stream.value([]);
+
+    return _ref
+        .where(Filter.or(
+          Filter('fromUid', isEqualTo: uid),
+          Filter('toUid', isEqualTo: uid),
+        ))
+        .snapshots()
+        .map((snap) {
+      final list = snap.docs
+          .map((doc) => SessionRequest.fromFirestore(doc.id, doc.data()))
+          .toList();
+      // Sort newest first (client-side)
+      list.sort((a, b) {
+        final aTime = a.createdAt ?? DateTime(2000);
+        final bTime = b.createdAt ?? DateTime(2000);
+        return bTime.compareTo(aTime);
+      });
+      return list;
+    }).handleError((error) {
+      // ignore: avoid_print
+      print('[SessionService] streamAllHistory error: $error');
+      return <SessionRequest>[];
+    });
+  }
+
   /// Stream accepted sessions where current user is the teacher.
   static Stream<List<SessionRequest>> streamTeacherAcceptedSessions() {
     final uid = _auth.currentUser?.uid;

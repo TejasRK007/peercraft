@@ -14,6 +14,7 @@ import '../models/mock_matching.dart';
 import 'match_profile_screen.dart';
 import 'session_requests_screen.dart';
 import 'video_call_screen.dart';
+import 'skill_selection_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<String> selectedSkills;
@@ -212,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       onReload: _loadMatches,
                       onAction: _showSnack,
                     ),
-                    _SessionsTab(onAction: _showSnack),
+                    _HistoryTab(onAction: _showSnack),
                     _ProfileTab(
                       intent: _currentIntent,
                       onIntentChanged: (newIntent) {
@@ -230,8 +231,25 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         bottomNavigationBar: BottomNavigationBar(
-          currentIndex: _tabIndex,
-          onTap: (i) => setState(() => _tabIndex = i),
+          currentIndex: _tabIndex >= 2 ? _tabIndex + 1 : _tabIndex,
+          onTap: (i) {
+            if (i == 2) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => SkillSelectionScreen(
+                    intent: _currentIntent,
+                    isAddingSkills: true,
+                    existingLearnSkills: widget.skillsToLearn,
+                    existingTeachSkills: widget.skillsToTeach,
+                  ),
+                ),
+              );
+              return;
+            }
+            setState(() {
+              _tabIndex = i > 2 ? i - 1 : i;
+            });
+          },
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.white.withAlpha(215),
           elevation: 10,
@@ -239,20 +257,38 @@ class _HomeScreenState extends State<HomeScreen> {
           unselectedItemColor: AppTheme.textMuted,
           showSelectedLabels: false,
           showUnselectedLabels: false,
-          items: const [
-            BottomNavigationBarItem(
+          items: [
+            const BottomNavigationBarItem(
               icon: Icon(Icons.home_rounded),
               label: 'Home',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.people_alt_rounded),
               label: 'Matches',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.history_rounded),
-              label: 'Sessions',
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.buttonGradient,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryPurple.withAlpha(50),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+              ),
+              label: 'Add Skill',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.history_rounded),
+              label: 'History',
+            ),
+            const BottomNavigationBarItem(
               icon: Icon(Icons.person_rounded),
               label: 'Profile',
             ),
@@ -1070,15 +1106,17 @@ class _QuickActions extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(
-              child: _ActionButton(
-                label: 'Find Match',
-                icon: Icons.search_rounded,
-                onTap: () => _showFindMatchSheet(context),
+            if (intent.includesLearn)
+              Expanded(
+                child: _ActionButton(
+                  label: 'Find Match',
+                  icon: Icons.search_rounded,
+                  onTap: () => _showFindMatchSheet(context),
+                ),
               ),
-            ),
-            if (intent == IntentMode.teach) ...[
+            if (intent.includesLearn && intent.includesTeach)
               const SizedBox(width: 12),
+            if (intent.includesTeach)
               Expanded(
                 child: _ActionButton(
                   label: 'Teach Now',
@@ -1086,7 +1124,6 @@ class _QuickActions extends StatelessWidget {
                   onTap: () => onAction('Teach Now'),
                 ),
               ),
-            ],
           ],
         ),
       ],
@@ -1843,157 +1880,68 @@ class _MatchRowCard extends StatelessWidget {
   }
 }
 
-class _SessionsTab extends StatelessWidget {
+class _HistoryTab extends StatelessWidget {
   final ValueChanged<String> onAction;
-  const _SessionsTab({required this.onAction});
+  const _HistoryTab({required this.onAction});
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
-      child: DefaultTabController(
-        length: 2,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 14, 24, 10),
-              child: Text(
-                'Sessions',
-                style: AppTheme.headingSmall.copyWith(fontSize: 24),
-              ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 14, 24, 10),
+            child: Text(
+              'Activity History',
+              style: AppTheme.headingSmall.copyWith(fontSize: 24),
             ),
-            // Tab bar
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 24),
-              height: 46,
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(180),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: TabBar(
-                indicator: BoxDecoration(
-                  gradient: AppTheme.buttonGradient,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                indicatorSize: TabBarIndicatorSize.tab,
-                dividerColor: Colors.transparent,
-                labelColor: Colors.white,
-                unselectedLabelColor: AppTheme.textMuted,
-                labelStyle: const TextStyle(
-                  fontFamily: 'Outfit',
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                ),
-                unselectedLabelStyle: const TextStyle(
-                  fontFamily: 'Outfit',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-                tabs: const [
-                  Tab(text: 'Incoming'),
-                  Tab(text: 'Sent'),
-                ],
-              ),
+          ),
+          Expanded(
+            child: StreamBuilder<List<SessionRequest>>(
+              stream: SessionService.streamAllHistory(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppTheme.primaryPurple),
+                  );
+                }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text('Error: ${snapshot.error}',
+                        style: AppTheme.subtitleStyle.copyWith(color: Colors.redAccent)),
+                  );
+                }
+                final requests = snapshot.data ?? [];
+                if (requests.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.history_rounded, size: 48, color: AppTheme.textMuted.withAlpha(120)),
+                        const SizedBox(height: 12),
+                        Text('No activity history yet', style: AppTheme.subtitleStyle),
+                      ],
+                    ),
+                  );
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(24, 10, 24, 88),
+                  itemCount: requests.length,
+                  itemBuilder: (context, i) {
+                    final req = requests[i];
+                    return _SessionRequestCard(
+                      request: req,
+                      isIncoming: !req.isSentByMe,
+                    );
+                  },
+                );
+              },
             ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  _IncomingRequestsList(),
-                  _SentRequestsList(),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
-}
-
-class _IncomingRequestsList extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<List<SessionRequest>>(
-      stream: SessionService.streamIncomingRequests(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppTheme.primaryPurple),
-          );
-        }
-        if (snapshot.hasError) {
-          return Center(
-            child: Text('Error: ${snapshot.error}',
-                style: AppTheme.subtitleStyle.copyWith(color: Colors.redAccent)),
-          );
-        }
-        final requests = snapshot.data ?? [];
-        if (requests.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.inbox_rounded, size: 48, color: AppTheme.textMuted.withAlpha(120)),
-                const SizedBox(height: 12),
-                Text('No incoming requests', style: AppTheme.subtitleStyle),
-              ],
-            ),
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          itemCount: requests.length,
-          itemBuilder: (context, i) => _SessionRequestCard(
-            request: requests[i],
-            isIncoming: true,
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _SentRequestsList extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<List<SessionRequest>>(
-      stream: SessionService.streamSentRequests(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppTheme.primaryPurple),
-          );
-        }
-        if (snapshot.hasError) {
-          return Center(
-            child: Text('Error: ${snapshot.error}',
-                style: AppTheme.subtitleStyle.copyWith(color: Colors.redAccent)),
-          );
-        }
-        final requests = snapshot.data ?? [];
-        if (requests.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.send_rounded, size: 48, color: AppTheme.textMuted.withAlpha(120)),
-                const SizedBox(height: 12),
-                Text('No sent requests', style: AppTheme.subtitleStyle),
-              ],
-            ),
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          itemCount: requests.length,
-          itemBuilder: (context, i) => _SessionRequestCard(
-            request: requests[i],
-            isIncoming: false,
-          ),
-        );
-      },
     );
   }
 }
@@ -2212,206 +2160,315 @@ class _ProfileTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final fallbackName = user?.email?.split('@').first ?? 'User';
+
     return SafeArea(
       top: false,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 14, 24, 88),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(230),
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(9),
-                  blurRadius: 18,
-                  offset: const Offset(0, 14),
+      child: StreamBuilder<Map<String, dynamic>?>(
+        stream: FirestoreService.streamCurrentUserProfile(),
+        builder: (context, snapshot) {
+          final data = snapshot.data ?? {};
+          final credits = (data['credits'] as num?)?.toInt() ?? 0;
+          final sessions = (data['sessionsCompleted'] as num?)?.toInt() ?? 1; // Fake 1 session for demo
+          final rating = (data['rating'] as num?)?.toDouble() ?? 5.0;
+          final streak = (data['streak'] as num?)?.toInt() ?? 3; // Demo 3 day streak
+
+          // Compute Badges
+          List<Map<String, dynamic>> badges = [
+            {'name': 'Early Adopter', 'icon': Icons.rocket_launch_rounded, 'color': const Color(0xFFFF9800)},
+          ];
+          if (sessions > 0) {
+            badges.add({'name': 'First Session', 'icon': Icons.handshake_rounded, 'color': const Color(0xFF4CAF50)});
+          }
+          if (streak >= 3) {
+            badges.add({'name': 'On Fire', 'icon': Icons.local_fire_department_rounded, 'color': const Color(0xFFFF5252)});
+          }
+          if (credits >= 100) {
+            badges.add({'name': 'Credit King', 'icon': Icons.diamond_rounded, 'color': const Color(0xFF448AFF)});
+          }
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 88),
+            physics: const BouncingScrollPhysics(),
+            children: [
+              // ── Top User Card ───────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2D1B69), Color(0xFF7C5CFC)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(color: const Color(0xFF7C5CFC).withAlpha(80), blurRadius: 24, offset: const Offset(0, 10)),
+                  ],
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  radius: 28,
-                  backgroundColor: AppTheme.primaryPurple,
-                  child: Icon(Icons.person_rounded,
-                      color: Colors.white, size: 26),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        FirebaseAuth.instance.currentUser?.displayName ??
-                            FirebaseAuth.instance.currentUser?.email?.split('@').first ??
-                            'User',
-                        style: AppTheme.headingSmall.copyWith(fontSize: 18),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        FirebaseAuth.instance.currentUser?.email ?? '',
-                        style: AppTheme.labelStyle.copyWith(
-                          color: AppTheme.textMuted,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                          child: const CircleAvatar(
+                            radius: 34,
+                            backgroundColor: AppTheme.lightLavender,
+                            child: Icon(Icons.person_rounded, color: AppTheme.primaryPurple, size: 36),
+                          ),
                         ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user?.displayName ?? data['name'] ?? fallbackName,
+                                style: AppTheme.headingSmall.copyWith(color: Colors.white, fontSize: 22),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                user?.email ?? '',
+                                style: AppTheme.labelStyle.copyWith(color: Colors.white.withAlpha(200), fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    // Stats Row
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withAlpha(40),
+                        borderRadius: BorderRadius.circular(18),
                       ),
-                      const SizedBox(height: 6),
-                      StreamBuilder<Map<String, dynamic>?>(
-                        stream: FirestoreService.streamCurrentUserProfile(),
-                        builder: (context, snapshot) {
-                          final credits = (snapshot.data?['credits'] as num?)?.toInt() ?? 0;
-                          return Text(
-                            '$credits credits available',
-                            style: AppTheme.labelStyle.copyWith(
-                              color: AppTheme.primaryPurple,
-                              fontWeight: FontWeight.w700,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _StatBlock(label: 'Sessions', value: '$sessions'),
+                          Container(width: 1, height: 30, color: Colors.white.withAlpha(40)),
+                          _StatBlock(label: 'Streak', value: '$streak🔥'),
+                          Container(width: 1, height: 30, color: Colors.white.withAlpha(40)),
+                          _StatBlock(label: 'Rating', value: '$rating⭐'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ── Credits Wallet ──────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [BoxShadow(color: Colors.black.withAlpha(6), blurRadius: 10, offset: const Offset(0, 4))],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF8E1),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.monetization_on_rounded, color: Color(0xFFFFB300), size: 28),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Available Credits', style: AppTheme.labelStyle.copyWith(color: AppTheme.textMuted)),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$credits Credits',
+                            style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w900, fontSize: 20, color: AppTheme.textDark),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // ── Badges & Achievements ─────────────────────────────
+              Text('Achievements', style: AppTheme.headingSmall.copyWith(fontSize: 18)),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 100,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: badges.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) {
+                    final badge = badges[index];
+                    return Container(
+                      width: 90,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: (badge['color'] as Color).withAlpha(50), width: 1.5),
+                        boxShadow: [BoxShadow(color: (badge['color'] as Color).withAlpha(15), blurRadius: 10, offset: const Offset(0, 4))],
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(badge['icon'] as IconData, color: badge['color'] as Color, size: 32),
+                          const SizedBox(height: 8),
+                          Text(
+                            badge['name'] as String,
+                            textAlign: TextAlign.center,
+                            style: AppTheme.labelStyle.copyWith(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textDark),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // ── Active Role ─────────────────────────────────────────
+              Text('Active Role', style: AppTheme.headingSmall.copyWith(fontSize: 18)),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceWhite,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppTheme.primaryPurple.withAlpha(20)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => onIntentChanged(IntentMode.learn),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: intent == IntentMode.learn ? AppTheme.primaryPurple : Colors.transparent,
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: intent == IntentMode.learn ? [BoxShadow(color: AppTheme.primaryPurple.withAlpha(50), blurRadius: 10, offset: const Offset(0, 4))] : [],
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Learner',
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                color: intent == IntentMode.learn ? Colors.white : AppTheme.textMuted,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 22),
-          Text(
-            'Active Role',
-            style: AppTheme.headingSmall.copyWith(fontSize: 18),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(230),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => onIntentChanged(IntentMode.learn),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: intent == IntentMode.learn ? AppTheme.primaryPurple : Colors.transparent,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Learner',
-                          style: TextStyle(
-                            fontFamily: 'Outfit',
-                            color: intent == IntentMode.learn ? Colors.white : AppTheme.textMuted,
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => onIntentChanged(IntentMode.teach),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: intent == IntentMode.teach ? AppTheme.primaryPurple : Colors.transparent,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Teacher',
-                          style: TextStyle(
-                            fontFamily: 'Outfit',
-                            color: intent == IntentMode.teach ? Colors.white : AppTheme.textMuted,
-                            fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => onIntentChanged(IntentMode.teach),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: intent == IntentMode.teach ? AppTheme.primaryPurple : Colors.transparent,
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: intent == IntentMode.teach ? [BoxShadow(color: AppTheme.primaryPurple.withAlpha(50), blurRadius: 10, offset: const Offset(0, 4))] : [],
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Teacher',
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                color: intent == IntentMode.teach ? Colors.white : AppTheme.textMuted,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // ── Skills Snapshot ─────────────────────────────────────
+              Text('Skills Snapshot', style: AppTheme.headingSmall.copyWith(fontSize: 18)),
+              const SizedBox(height: 12),
+              _SkillLevelChips(skills: selectedSkills, isTeachSkills: true),
+              const SizedBox(height: 32),
+
+              // ── Actions ─────────────────────────────────────────────
+              SizedBox(
+                height: 52,
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => onAction('Edit profile (demo)'),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppTheme.primaryPurple,
+                    side: BorderSide(color: AppTheme.primaryPurple.withAlpha(80), width: 1.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                   ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 22),
-          Text(
-            'Skills Snapshot',
-            style: AppTheme.headingSmall.copyWith(fontSize: 18),
-          ),
-          const SizedBox(height: 10),
-          _SkillLevelChips(skills: selectedSkills, isTeachSkills: true),
-          const SizedBox(height: 18),
-          SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () => onAction('Edit profile (demo)'),
-              style: OutlinedButton.styleFrom(
-                backgroundColor: Colors.white.withAlpha(230),
-                foregroundColor: AppTheme.primaryPurple,
-                side: BorderSide(
-                  color: AppTheme.primaryPurple.withAlpha(120),
-                  width: 1.3,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+                  child: const Text('Edit Profile', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w800, fontSize: 15)),
                 ),
               ),
-              child: const Text(
-                'Edit profile',
-                style: TextStyle(
-                  fontFamily: 'Outfit',
-                  fontWeight: FontWeight.w900,
-                  fontSize: 14.5,
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 52,
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () async {
+                    await OnboardingPreferencesService().clear();
+                    await FirebaseAuth.instance.signOut();
+                    if (context.mounted) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const AuthGate()),
+                        (route) => false,
+                      );
+                    }
+                  },
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFF0F0),
+                    foregroundColor: Colors.redAccent,
+                    side: BorderSide(color: Colors.redAccent.withAlpha(80), width: 1.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  ),
+                  child: const Text('Log Out', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w800, fontSize: 15)),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () async {
-                // Clear local data and sign out of Firebase
-                await OnboardingPreferencesService().clear();
-                await FirebaseAuth.instance.signOut();
-                // Navigate to root — AuthGate will redirect to login
-                if (context.mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const AuthGate()),
-                    (route) => false,
-                  );
-                }
-              },
-              style: OutlinedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFF0F0),
-                foregroundColor: Colors.redAccent,
-                side: BorderSide(
-                  color: Colors.redAccent.withAlpha(80),
-                  width: 1.3,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-              ),
-              child: const Text(
-                'Log Out',
-                style: TextStyle(
-                  fontFamily: 'Outfit',
-                  fontWeight: FontWeight.w900,
-                  fontSize: 14.5,
-                ),
-              ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
+    );
+  }
+}
+
+class _StatBlock extends StatelessWidget {
+  final String label;
+  final String value;
+  const _StatBlock({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(value, style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w900, fontSize: 18, color: Colors.white)),
+        const SizedBox(height: 2),
+        Text(label, style: AppTheme.labelStyle.copyWith(color: Colors.white.withAlpha(180), fontSize: 12)),
+      ],
     );
   }
 }
