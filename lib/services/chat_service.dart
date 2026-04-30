@@ -108,6 +108,22 @@ class ChatService {
 
   String get _myUid => _auth.currentUser!.uid;
 
+  // ── Name resolver ─────────────────────────────────────────────────────────
+  /// Reads the real name from Firestore (where it was saved during signup).
+  /// Falls back to Firebase Auth displayName, then email prefix, then 'Someone'.
+  static Future<String> _getMyName() async {
+    final me = _auth.currentUser;
+    if (me == null) return 'Someone';
+    try {
+      final doc = await _db.collection('users').doc(me.uid).get();
+      final fsName = doc.data()?['name'] as String?;
+      if (fsName != null && fsName.trim().isNotEmpty) return fsName.trim();
+    } catch (_) {}
+    final authName = me.displayName;
+    if (authName != null && authName.trim().isNotEmpty) return authName.trim();
+    return me.email?.split('@').first ?? 'Someone';
+  }
+
   // ── Send Message ──────────────────────────────────────────────────────────
   /// Sends [text] to [peerId] and writes a notification to the peer's inbox.
   Future<void> sendMessage({
@@ -116,8 +132,7 @@ class ChatService {
     required String text,
   }) async {
     final me = _auth.currentUser!;
-    final myName =
-        me.displayName ?? me.email?.split('@').first ?? 'Someone';
+    final myName = await _getMyName();
     final convId = conversationId(me.uid, peerId);
     final convRef = _db.collection('chats').doc(convId);
     final now = FieldValue.serverTimestamp();

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/onboarding_preferences_service.dart';
 import '../services/firestore_service.dart';
 import '../services/session_service.dart';
@@ -16,6 +17,25 @@ import 'video_call_screen.dart';
 import 'skill_selection_screen.dart';
 import 'notifications_screen.dart';
 import '../services/chat_service.dart';
+
+/// Looks up the user's display name from Firestore.
+/// Falls back to [storedName] if already populated, then to email-prefix.
+/// Used to fix legacy records where [storedName] was saved as empty string.
+Future<String> _resolveUserName(String uid, {String storedName = ''}) async {
+  if (storedName.trim().isNotEmpty) return storedName.trim();
+  if (uid.isEmpty) return 'Unknown';
+  try {
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
+    final name = doc.data()?['name'] as String?;
+    if (name != null && name.trim().isNotEmpty) return name.trim();
+    final email = doc.data()?['email'] as String?;
+    if (email != null && email.contains('@')) return email.split('@').first;
+  } catch (_) {}
+  return 'Unknown';
+}
 
 class HomeScreen extends StatefulWidget {
   final List<String> selectedSkills;
@@ -1968,13 +1988,32 @@ class _HistoryTab extends StatelessWidget {
   }
 }
 
-class _SessionRequestCard extends StatelessWidget {
+class _SessionRequestCard extends StatefulWidget {
   final SessionRequest request;
   final bool isIncoming;
   const _SessionRequestCard({required this.request, required this.isIncoming});
 
+  @override
+  State<_SessionRequestCard> createState() => _SessionRequestCardState();
+}
+
+class _SessionRequestCardState extends State<_SessionRequestCard> {
+  late Future<String> _nameFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    final rawName = widget.isIncoming
+        ? widget.request.fromName
+        : widget.request.toName;
+    final uid = widget.isIncoming
+        ? widget.request.fromUid
+        : widget.request.toUid;
+    _nameFuture = _resolveUserName(uid, storedName: rawName);
+  }
+
   Color get _statusColor {
-    switch (request.status) {
+    switch (widget.request.status) {
       case 'pending': return const Color(0xFFFFB347);
       case 'accepted': return const Color(0xFF4CAF50);
       case 'rejected': return Colors.redAccent;
@@ -1983,7 +2022,7 @@ class _SessionRequestCard extends StatelessWidget {
   }
 
   IconData get _statusIcon {
-    switch (request.status) {
+    switch (widget.request.status) {
       case 'pending': return Icons.schedule_rounded;
       case 'accepted': return Icons.check_circle_rounded;
       case 'rejected': return Icons.cancel_rounded;
@@ -1991,97 +2030,99 @@ class _SessionRequestCard extends StatelessWidget {
     }
   }
 
-  String get _peerName => isIncoming ? request.fromName : request.toName;
-
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withAlpha(240),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(8),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header row
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: AppTheme.primaryPurple,
-                child: Text(
-                  _peerName.isNotEmpty ? _peerName[0].toUpperCase() : '?',
-                  style: const TextStyle(
-                    fontFamily: 'Outfit', fontWeight: FontWeight.w900,
-                    fontSize: 16, color: Colors.white,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_peerName, style: AppTheme.headingSmall.copyWith(fontSize: 15)),
-                    Text(
-                      isIncoming ? 'wants to connect' : 'request sent',
-                      style: AppTheme.labelStyle.copyWith(color: AppTheme.textMuted, fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _statusColor.withAlpha(20),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _statusColor.withAlpha(80)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(_statusIcon, size: 12, color: _statusColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      request.status[0].toUpperCase() + request.status.substring(1),
-                      style: TextStyle(
-                        fontFamily: 'Outfit', fontWeight: FontWeight.w800,
-                        fontSize: 10, color: _statusColor,
-                      ),
-                    ),
-                  ],
-                ),
+    return FutureBuilder<String>(
+      future: _nameFuture,
+      builder: (context, snap) {
+        final peerName = snap.data ?? '';
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(240),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(8),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header row
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: AppTheme.primaryPurple,
+                    child: Text(
+                      peerName.isNotEmpty ? peerName[0].toUpperCase() : '?',
+                      style: const TextStyle(
+                        fontFamily: 'Outfit', fontWeight: FontWeight.w900,
+                        fontSize: 16, color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(peerName.isNotEmpty ? peerName : '…', style: AppTheme.headingSmall.copyWith(fontSize: 15)),
+                        Text(
+                          widget.isIncoming ? 'wants to connect' : 'request sent',
+                          style: AppTheme.labelStyle.copyWith(color: AppTheme.textMuted, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _statusColor.withAlpha(20),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: _statusColor.withAlpha(80)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(_statusIcon, size: 12, color: _statusColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          widget.request.status[0].toUpperCase() + widget.request.status.substring(1),
+                          style: TextStyle(
+                            fontFamily: 'Outfit', fontWeight: FontWeight.w800,
+                            fontSize: 10, color: _statusColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
           const SizedBox(height: 10),
           // Info row
           Wrap(
             spacing: 6,
             runSpacing: 6,
             children: [
-              _chip(Icons.auto_awesome_rounded, request.skill),
-              _chip(Icons.schedule_rounded, request.slot),
-              _chip(Icons.people_rounded, request.sessionType),
+              _chip(Icons.auto_awesome_rounded, widget.request.skill),
+              _chip(Icons.schedule_rounded, widget.request.slot),
+              _chip(Icons.people_rounded, widget.request.sessionType),
             ],
           ),
           const SizedBox(height: 10),
           // Actions
-          if (isIncoming && request.status == 'pending')
+          if (widget.isIncoming && widget.request.status == 'pending')
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => SessionService.acceptRequest(request.id),
+                    onPressed: () => SessionService.acceptRequest(widget.request.id),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF4CAF50),
                       foregroundColor: Colors.white,
@@ -2096,7 +2137,7 @@ class _SessionRequestCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => SessionService.rejectRequest(request.id),
+                    onPressed: () => SessionService.rejectRequest(widget.request.id),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.redAccent,
                       side: const BorderSide(color: Colors.redAccent),
@@ -2109,7 +2150,7 @@ class _SessionRequestCard extends StatelessWidget {
                 ),
               ],
             ),
-          if (request.status == 'accepted')
+          if (widget.request.status == 'accepted')
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -2117,12 +2158,12 @@ class _SessionRequestCard extends StatelessWidget {
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => VideoCallScreen(
-                        channelName: request.channelName,
-                        peerName: _peerName,
-                        teacherUid: request.teacherUid,
-                        skill: request.skill,
+                        channelName: widget.request.channelName,
+                        peerName: peerName,
+                        teacherUid: widget.request.teacherUid,
+                        skill: widget.request.skill,
                         isTeacher: FirebaseAuth.instance.currentUser?.uid ==
-                            request.teacherUid,
+                            widget.request.teacherUid,
                       ),
                     ),
                   );
@@ -2142,6 +2183,8 @@ class _SessionRequestCard extends StatelessWidget {
         ],
       ),
     );
+      }, // FutureBuilder builder
+    ); // FutureBuilder
   }
 
   Widget _chip(IconData icon, String text) {

@@ -68,6 +68,22 @@ class SessionService {
   static CollectionReference<Map<String, dynamic>> get _ref =>
       _firestore.collection('session_requests');
 
+  // ── Name resolver ─────────────────────────────────────────────────────────
+  /// Reads the real name from Firestore (where it was saved during signup).
+  /// Falls back to Firebase Auth displayName, then email prefix, then 'User'.
+  static Future<String> _getMyName() async {
+    final user = _auth.currentUser;
+    if (user == null) return 'User';
+    try {
+      final doc = await _firestore.collection('users').doc(user.uid).get();
+      final fsName = doc.data()?['name'] as String?;
+      if (fsName != null && fsName.trim().isNotEmpty) return fsName.trim();
+    } catch (_) {}
+    final authName = user.displayName;
+    if (authName != null && authName.trim().isNotEmpty) return authName.trim();
+    return user.email?.split('@').first ?? 'User';
+  }
+
   // ── Send ──────────────────────────────────────────────────────────────
 
   /// Send a session request to a peer.
@@ -82,7 +98,7 @@ class SessionService {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    final myName = user.displayName ?? user.email?.split('@').first ?? 'User';
+    final myName = await _getMyName();
 
     // Deterministic channel name from sorted UIDs
     final ids = [user.uid, toUid]..sort();
