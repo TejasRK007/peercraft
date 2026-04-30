@@ -12,9 +12,10 @@ import '../main.dart';
 import '../models/intent_mode.dart';
 import '../models/mock_matching.dart';
 import 'match_profile_screen.dart';
-import 'session_requests_screen.dart';
 import 'video_call_screen.dart';
 import 'skill_selection_screen.dart';
+import 'notifications_screen.dart';
+import '../services/chat_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<String> selectedSkills;
@@ -1456,29 +1457,43 @@ class _MentorListTile extends StatelessWidget {
                             shape: BoxShape.circle),
                       ),
                       const SizedBox(width: 8),
-                      Text('${u.sessionsCompleted} sessions',
-                          style: AppTheme.labelStyle.copyWith(
-                              fontSize: 12, color: AppTheme.textMuted)),
+                      Expanded(
+                        child: Text('${u.sessionsCompleted} sessions',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTheme.labelStyle.copyWith(
+                                fontSize: 12,
+                                color: AppTheme.textMuted,
+                                fontWeight: FontWeight.w700)),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 5),
                   // Skill match badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryPurple.withAlpha(18),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      'Teaches: $targetSkill',
-                      style: const TextStyle(
-                        fontFamily: 'Outfit',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 11.5,
-                        color: AppTheme.primaryPurple,
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryPurple.withAlpha(18),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            'Teaches: $targetSkill',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: 'Outfit',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 11.5,
+                              color: AppTheme.primaryPurple,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
@@ -1577,84 +1592,91 @@ class _Greeting extends StatelessWidget {
           style: AppTheme.headlineStyle.copyWith(fontSize: 30),
         ),
         const Spacer(),
-        // Notification bell with live badge
+        // Bell icon — badge combines session requests + chat notifications
         StreamBuilder<int>(
-          stream: SessionService.streamPendingCount(),
-          builder: (context, snapshot) {
-            final count = snapshot.data ?? 0;
-            return GestureDetector(
-              onTap: () {
-                Navigator.of(context).push(
-                  PageRouteBuilder(
-                    transitionDuration: const Duration(milliseconds: 420),
-                    pageBuilder: (_, __, ___) => SessionRequestsScreen(intent: intent),
-                    transitionsBuilder: (_, animation, __, child) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0, 0.06),
-                            end: Offset.zero,
-                          ).animate(CurvedAnimation(
-                            parent: animation,
-                            curve: Curves.easeOutCubic,
-                          )),
-                          child: child,
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-              child: Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(10),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    const Icon(
-                      Icons.notifications_rounded,
-                      color: AppTheme.deepPurple,
-                      size: 22,
-                    ),
-                    if (count > 0)
-                      Positioned(
-                        top: 6,
-                        right: 6,
-                        child: Container(
-                          width: 18,
-                          height: 18,
-                          decoration: const BoxDecoration(
-                            color: Colors.redAccent,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Text(
-                              count > 9 ? '9+' : '$count',
-                              style: const TextStyle(
-                                fontFamily: 'Outfit',
-                                fontWeight: FontWeight.w900,
-                                fontSize: 10,
-                                color: Colors.white,
-                              ),
-                            ),
+          stream: ChatService.instance.streamUnreadNotificationCount(),
+          builder: (context, chatSnap) {
+            return StreamBuilder<int>(
+              stream: SessionService.streamPendingCount(),
+              builder: (context, sessionSnap) {
+                final totalCount =
+                    (chatSnap.data ?? 0) + (sessionSnap.data ?? 0);
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      PageRouteBuilder(
+                        transitionDuration:
+                            const Duration(milliseconds: 380),
+                        pageBuilder: (_, __, ___) =>
+                            const NotificationsScreen(),
+                        transitionsBuilder:
+                            (_, animation, __, child) => FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 0.06),
+                              end: Offset.zero,
+                            ).animate(CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeOutCubic,
+                            )),
+                            child: child,
                           ),
                         ),
                       ),
-                  ],
-                ),
-              ),
+                    );
+                  },
+                  child: Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(10),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        const Icon(
+                          Icons.notifications_rounded,
+                          color: AppTheme.deepPurple,
+                          size: 22,
+                        ),
+                        if (totalCount > 0)
+                          Positioned(
+                            top: 6,
+                            right: 6,
+                            child: Container(
+                              width: 18,
+                              height: 18,
+                              decoration: const BoxDecoration(
+                                color: Colors.redAccent,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  totalCount > 9 ? '9+' : '$totalCount',
+                                  style: const TextStyle(
+                                    fontFamily: 'Outfit',
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 10,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             );
           },
         ),

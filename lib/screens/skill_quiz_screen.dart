@@ -258,14 +258,16 @@ class _SkillQuizScreenState extends State<SkillQuizScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(skill,
-                                style: AppTheme.headingSmall.copyWith(fontSize: 20)),
-                            Text(
-                              'Skill ${_skillIndex + 1} of ${widget.teachSkills.length}',
-                              style: AppTheme.subtitleStyle.copyWith(fontSize: 13),
-                            ),
-                          ]),
+                          Expanded(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(skill,
+                                  style: AppTheme.headingSmall.copyWith(fontSize: 20)),
+                              Text(
+                                'Skill ${_skillIndex + 1} of ${widget.teachSkills.length}',
+                                style: AppTheme.subtitleStyle.copyWith(fontSize: 13),
+                              ),
+                            ]),
+                          ),
                           // Timer
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 300),

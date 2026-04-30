@@ -174,12 +174,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     position: _slideUp,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 28),
-                      child: Row(
-                        children: [
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: const [
                           _FeaturePill(icon: Icons.people_outline_rounded, label: 'Peer Learning'),
-                          const SizedBox(width: 10),
                           _FeaturePill(icon: Icons.auto_awesome_rounded, label: 'Smart Matched'),
-                          const SizedBox(width: 10),
                           _FeaturePill(icon: Icons.swap_horiz_rounded, label: 'Skill Swap'),
                         ],
                       ),

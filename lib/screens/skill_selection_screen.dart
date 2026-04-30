@@ -479,7 +479,7 @@ class _SkillGrid extends StatelessWidget {
         crossAxisCount: 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 1 / 0.88,
+        childAspectRatio: 1 / 0.98,
       ),
       itemBuilder: (context, index) {
         final s = skills[index];

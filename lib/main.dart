@@ -8,12 +8,16 @@ import 'screens/home_screen.dart';
 import 'screens/skill_selection_screen.dart';
 import 'services/onboarding_preferences_service.dart';
 import 'services/firestore_service.dart';
+import 'services/agora_chat_service.dart';
 import 'models/intent_mode.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  
+
+  // Initialize Agora Chat SDK once at startup
+  await AgoraChatService.instance.init();
+
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -33,11 +37,6 @@ class PeerCraftApp extends StatefulWidget {
 }
 
 class _PeerCraftAppState extends State<PeerCraftApp> {
-  @override
-  void initState() {
-    super.initState();
-  }
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -70,8 +69,13 @@ class AuthGate extends StatelessWidget {
         final user = snapshot.data;
         // User is not logged in
         if (user == null) {
+          // Ensure chat is logged out when Firebase signs out
+          AgoraChatService.instance.logout();
           return const OnboardingScreen();
         }
+
+        // Login to Agora Chat whenever a Firebase user is detected
+        AgoraChatService.instance.loginCurrentUser();
 
         // User is logged in, check if they have completed skill setup
         return FutureBuilder(

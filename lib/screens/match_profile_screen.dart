@@ -323,7 +323,10 @@ class _MatchProfileScreenState extends State<MatchProfileScreen> {
                         transitionDuration:
                             const Duration(milliseconds: 420),
                         pageBuilder: (_, __, ___) =>
-                            ChatScreen(peerName: match.user.name),
+                            ChatScreen(
+                              peerId: match.user.uid,
+                              peerName: match.user.name,
+                            ),
                         transitionsBuilder: (_, animation, __, child) {
                           return FadeTransition(
                             opacity: animation,
@@ -713,7 +716,7 @@ class _BottomActions extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: canSend ? onRequestSession : null,
               icon: const Icon(Icons.send_rounded, size: 18),
-              label: const Text('Request Session'),
+              label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Request Session')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryPurple,
                 foregroundColor: Colors.white,
@@ -736,7 +739,7 @@ class _BottomActions extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: onChatFirst,
               icon: const Icon(Icons.chat_rounded, size: 18),
-              label: const Text('Chat'),
+              label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Chat')),
               style: OutlinedButton.styleFrom(
                 backgroundColor: Colors.white.withAlpha(230),
                 foregroundColor: AppTheme.primaryPurple,
